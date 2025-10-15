@@ -6,10 +6,10 @@
 *.dylib
 /bin/
 /cmd/web/web
-main
-web
-seed
-addpage
+/cmd/addmodel/addmodel
+/cmd/addpage/addpage
+/cmd/seed/seed
+/cmd/migrate/migrate
 
 # Test binary
 *.test
@@ -42,6 +42,3 @@ Thumbs.db
 
 # Air hot reload
 /tmp/
-
-# Generated files
-/internal/ent/
