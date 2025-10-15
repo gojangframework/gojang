@@ -1,0 +1,88 @@
+version: '3'
+
+# Cross-platform task file for Gojang Framework
+# Replaces Makefile with Go Task for better cross-platform support
+
+vars:
+  # Detect OS and set binary suffix
+  EXE: '{{ if eq OS "windows" }}.exe{{ end }}'
+  BIN: 'bin/web{{ if eq OS "windows" }}.exe{{ end }}'
+  
+  # Direct paths to main.go files
+  WEB_MAIN: './gojang/cmd/web/main.go'
+  MIGRATE_MAIN: './gojang/cmd/migrate/main.go'
+  SEED_MAIN: './gojang/cmd/seed/main.go'
+  
+  # External tools (can be overridden)
+  MIGRATE: '{{ .MIGRATE | default "migrate" }}'
+  AIR: '{{ .AIR | default "air" }}'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  dev:
+    desc: "Run server with live reload (requires air: go install github.com/air-verse/air@latest)"
+    cmds:
+      - '{{ if eq OS "windows" }}air -c .air.windows.toml{{ else }}air -c .air.unix.toml{{ end }}'
+
+  build:
+    desc: Build the web binary
+    cmds:
+      - go build -o {{.BIN}} {{.WEB_MAIN}}
+
+
+  schema-gen:
+    desc: Generate Ent code (gojang)
+    cmds:
+      - go generate ./gojang/models
+
+  migrate:
+    desc: Run database migrations up
+    cmds:
+      - go run {{.MIGRATE_MAIN}} up
+
+  migrate-down:
+    desc: Rollback last migration
+    cmds:
+      - go run {{.MIGRATE_MAIN}} down
+
+  migrate-create:
+    desc: "Create a new migration (use: task migrate-create -- name=add_users)"
+    cmds:
+      - '{{.MIGRATE}} create -ext sql -dir gojang/models/migrations -seq {{.name}}'
+
+  seed:
+    desc: Seed database with initial admin login
+    cmds:
+      - go run {{.SEED_MAIN}}
+
+  addpage:
+    desc: Create a new static page interactively
+    cmds:
+      - go run ./gojang/cmd/addpage
+
+  addmodel:
+    desc: Create a new data model interactively
+    cmds:
+      - go run ./gojang/cmd/addmodel
+
+  clean:
+    desc: Clean build artifacts and generated files
+    cmds:
+      - '{{ if eq OS "windows" }}powershell -Command "if (Test-Path bin) { Remove-Item -Recurse -Force bin }"{{ else }}rm -rf bin/{{ end }}'
+      - '{{ if eq OS "windows" }}powershell -Command "if (Test-Path internal/ent) { Remove-Item -Recurse -Force internal/ent }"{{ else }}rm -rf internal/ent/{{ end }}'
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...
+
+  run:
+    desc: Build and run the server
+    deps: [build]
+    cmds:
+      - '{{.BIN}}'

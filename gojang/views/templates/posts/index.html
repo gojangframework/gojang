@@ -1,0 +1,56 @@
+{{define "title"}}Posts - Gojang{{end}}
+
+{{define "content"}}
+<div class="container">
+    <div class="page-header">
+        <h2>Posts</h2>
+        {{if .User}}
+        <button hx-get="/posts/new" hx-target="#modal" hx-swap="innerHTML" class="btn btn-primary">
+            + New Post
+        </button>
+        {{end}}
+    </div>
+
+    <div id="posts-list" class="posts-container">
+        {{range .Data.Posts}}
+        <div class="card post-card" id="post-{{.ID}}">
+            <h3>{{.Subject}}</h3>
+            <div class="post-meta">
+                <span class="author">By: {{if .Edges.Author}}{{.Edges.Author.Email}}{{else}}Unknown{{end}}</span>
+                <span class="date">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+            </div>
+            <div class="post-body">
+                {{.Body}}
+            </div>
+            {{if $.User}}
+            {{if or $.User.IsStaff (eq $.User.ID .Edges.Author.ID)}}
+            <div class="post-actions">
+                <button 
+                    hx-get="/posts/{{.ID}}/edit" 
+                    hx-target="#modal" 
+                    hx-swap="innerHTML"
+                    class="btn-sm btn-secondary">
+                    Edit
+                </button>
+                <button 
+                    hx-get="/posts/{{.ID}}/delete"
+                    hx-target="#modal" 
+                    hx-swap="innerHTML"
+                    class="btn-sm btn-danger">
+                    Delete
+                </button>
+            </div>
+            {{end}}
+            {{end}}
+        </div>
+        {{else}}
+        <div class="card">
+            <p class="text-center">No posts yet. Be the first to create one!</p>
+        </div>
+        {{end}}
+    </div>
+</div>
+
+<!-- Modal container -->
+<div id="modal" class="modal"></div>
+{{end}}

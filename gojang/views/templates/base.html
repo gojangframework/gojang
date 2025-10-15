@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}Gojang{{end}}</title>
+    <link rel="icon" type="image/x-icon" href="/static/images/gojang_favicon.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <meta name="csrf-token" content="{{.CSRFToken}}">
+    <script>
+        // Configure htmx to send CSRF token with every request
+        document.addEventListener('htmx:configRequest', function(evt) {
+            const token = document.querySelector('meta[name="csrf-token"]');
+            if (token) {
+                evt.detail.headers['X-CSRF-Token'] = token.content;
+            }
+        });
+
+        // Close modal on HX-Trigger: closeModal
+        document.addEventListener('closeModal', function(evt) {
+            console.log('closeModal event received');
+            const modal = document.getElementById('modal');
+            if (modal) {
+                modal.innerHTML = '';
+            }
+        });
+
+        // Alternative: Listen for htmx after swap event to close modal
+        document.addEventListener('htmx:afterSwap', function(evt) {
+            // Check if the response included closeModal trigger
+            const triggerHeader = evt.detail.xhr.getResponseHeader('HX-Trigger');
+            if (triggerHeader && triggerHeader.includes('closeModal')) {
+                const modal = document.getElementById('modal');
+                if (modal) {
+                    modal.innerHTML = '';
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+    {{template "header" .}}
+    
+    {{if .Flash}}
+    <div class="flash flash-{{.FlashType}}" id="flash">
+        {{.Flash}}
+    </div>
+    {{end}}
+
+    <main id="content">
+        {{block "content" .}}{{end}}
+    </main>
+
+    {{template "footer" .}}
+</body>
+</html>
+
+{{define "header"}}
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <h1 class="logo">
+                <a href="/">
+                    <img src="/static/images/gojang_logo_2.png" width="100" alt="Gojang">
+                </a>
+            </h1>
+            <nav class="nav">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/posts">Posts</a>
+                    {{if .User.IsStaff}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
+                    <!-- <span class="user-info">{{.User.Email}}</span> -->
+                    <form hx-post="/logout" hx-swap="none" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <button type="submit" class="btn-link btn-logout">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/posts">Posts</a>
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </nav>
+        </div>
+    </div>
+</header>
+{{end}}
+
+{{define "footer"}}
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2025 Gojang - Django-like web framework in Go
+        <img src="/static/images/gojang-cat.gif" alt="Gojang Cat" width="60"></p>
+    </div>
+</footer>
+{{end}}

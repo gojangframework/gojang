@@ -1,0 +1,136 @@
+{{define "title"}}{{if .Data.Record}}Edit{{else}}New{{end}} {{.Data.Config.Name}} - Admin{{end}}
+
+{{define "head"}}
+<meta name="robots" content="noindex, nofollow">
+{{end}}
+
+{{define "content"}}
+{{$config := .Data.Config}}
+{{$record := .Data.Record}}
+{{$modelNameLower := $config.Name | lower}}
+{{$isEdit := ne $record nil}}
+
+<div class="admin-form-modal-overlay" onclick="closeFormModal()">
+    <div class="admin-form-modal-content" onclick="event.stopPropagation()">
+        <div class="admin-form-modal-header">
+            <h2>{{$config.Icon}} {{if $isEdit}}Edit{{else}}Create{{end}} {{$config.Name}}</h2>
+            <button class="admin-modal-close" onclick="closeFormModal()">×</button>
+        </div>
+
+        <div class="form-modal-body">
+        <form 
+            {{if $isEdit}}
+            hx-put="/admin/{{$modelNameLower}}/{{getID $record}}"
+            {{else}}
+            hx-post="/admin/{{$modelNameLower}}"
+            {{end}}
+            hx-target="#{{$modelNameLower}}-list"
+            hx-swap="innerHTML"
+            hx-on::after-request="if(event.detail.successful) closeFormModal()"
+            class="admin-form">
+
+            {{range $config.Fields}}
+                {{if not (contains $.Data.Config.HiddenFields .Name)}}
+                <div class="admin-form-group {{if .Readonly}}admin-readonly-field{{end}}">
+                    <label for="{{.Name}}">{{.Label}}{{if .Readonly}} (Read-only){{end}}</label>
+
+                    {{if .Readonly}}
+                        <input 
+                            type="text" 
+                            id="{{.Name}}" 
+                            value="{{if $record}}{{fieldValue $record .Name}}{{end}}"
+                            readonly
+                            class="admin-readonly-input">
+                    {{else if eq .Type "text"}}
+                        <textarea 
+                            id="{{.Name}}" 
+                            name="{{.Name}}" 
+                            rows="5"
+                            {{if .Required}}required{{end}}>{{if $record}}{{fieldValue $record .Name}}{{end}}</textarea>
+
+                    {{else if eq .Type "bool"}}
+                        <div class="admin-checkbox-wrapper">
+                            <input 
+                                type="checkbox" 
+                                id="{{.Name}}" 
+                                name="{{.Name}}" 
+                                value="true"
+                                {{if $record}}{{if fieldValue $record .Name}}checked{{end}}{{end}}>
+                            <span class="admin-checkbox-label">{{.Label}}</span>
+                        </div>
+
+                    {{else if eq .Type "password"}}
+                        <input 
+                            type="password" 
+                            id="{{.Name}}" 
+                            name="{{.Name}}"
+                            {{if not $isEdit}}{{if .Required}}required{{end}}{{end}}
+                            placeholder="{{if $isEdit}}Leave blank to keep current password{{end}}">
+
+                    {{else if eq .Type "email"}}
+                        <input 
+                            type="email" 
+                            id="{{.Name}}" 
+                            name="{{.Name}}"
+                            {{if .Required}}required{{end}}
+                            value="{{if $record}}{{fieldValue $record .Name}}{{end}}">
+
+                    {{else if eq .Type "int"}}
+                        <input 
+                            type="number" 
+                            id="{{.Name}}" 
+                            name="{{.Name}}"
+                            {{if .Required}}required{{end}}
+                            value="{{if $record}}{{fieldValue $record .Name}}{{end}}">
+
+                    {{else if eq .Type "time"}}
+                        <input 
+                            type="datetime-local" 
+                            id="{{.Name}}" 
+                            name="{{.Name}}"
+                            {{if .Required}}required{{end}}
+                            value="{{if $record}}{{formatDateTime $record .Name}}{{end}}">
+
+                    {{else}}
+                        <input 
+                            type="text" 
+                            id="{{.Name}}" 
+                            name="{{.Name}}"
+                            {{if .Required}}required{{end}}
+                            value="{{if $record}}{{fieldValue $record .Name}}{{end}}">
+                    {{end}}
+
+                    {{if .Help}}
+                    <small class="admin-help-text">{{.Help}}</small>
+                    {{end}}
+                </div>
+                {{end}}
+            {{end}}
+
+            <div class="admin-form-actions">
+                <button type="submit" class="admin-btn-primary">
+                    {{if $isEdit}}Update{{else}}Create{{end}} {{$config.Name}}
+                </button>
+                <button type="button" onclick="closeFormModal()" class="admin-btn-secondary">Cancel</button>
+            </div>
+        </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeFormModal() {
+    document.getElementById('form-modal').innerHTML = '';
+}
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeFormModal();
+    }
+});
+</script>
+
+<!-- admin styles moved to /admin/static/css/admin.css -->
+
+{{end}}

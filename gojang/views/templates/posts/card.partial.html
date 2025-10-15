@@ -1,0 +1,31 @@
+<div class="card post-card" id="post-{{.Data.Post.ID}}">
+    <h3>{{.Data.Post.Subject}}</h3>
+    <div class="post-meta">
+        <span class="author">By: {{if .Data.Post.Edges.Author}}{{.Data.Post.Edges.Author.Email}}{{else}}Unknown{{end}}</span>
+        <span class="date">{{.Data.Post.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+    </div>
+    <div class="post-body">
+        {{.Data.Post.Body}}
+    </div>
+    {{if and .User .Data.Post.Edges.Author}}
+        {{if or .User.IsStaff (eq .User.ID .Data.Post.Edges.Author.ID)}}
+        <div class="post-actions">
+            <button 
+                hx-get="/posts/{{.Data.Post.ID}}/edit" 
+                hx-target="#modal" 
+                hx-swap="innerHTML"
+                class="btn-sm btn-secondary">
+                Edit
+            </button>
+            <button 
+                hx-delete="/posts/{{.Data.Post.ID}}" 
+                hx-target="#post-{{.Data.Post.ID}}" 
+                hx-swap="outerHTML"
+                hx-confirm="Are you sure you want to delete this post?"
+                class="btn-sm btn-danger">
+                Delete
+            </button>
+        </div>
+        {{end}}
+    {{end}}
+</div>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}Admin Panel - Gojang{{end}}</title>
+    {{block "head" .}}{{end}}
+    <link rel="icon" type="image/x-icon" href="/static/images/gojang_favicon.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/admin/static/css/admin.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <meta name="csrf-token" content="{{.CSRFToken}}">
+    <script>
+        // Configure htmx to send CSRF token with every request
+        document.addEventListener('htmx:configRequest', function(evt) {
+            const token = document.querySelector('meta[name="csrf-token"]');
+            if (token) {
+                evt.detail.headers['X-CSRF-Token'] = token.content;
+            }
+        });
+
+        // Close form modal
+        function closeFormModal() {
+            const modal = document.getElementById('form-modal');
+            if (modal) {
+                modal.innerHTML = '';
+            }
+        }
+
+        // Close delete modal
+        function closeDeleteModal() {
+            const modal = document.getElementById('delete-modal');
+            if (modal) {
+                modal.innerHTML = '';
+            }
+        }
+
+        // Listen for htmx after swap to handle auto-close
+        document.addEventListener('htmx:afterSwap', function(evt) {
+            const trigger = evt.detail.xhr.getResponseHeader('HX-Trigger');
+            if (trigger) {
+                if (trigger.includes('closeFormModal')) {
+                    closeFormModal();
+                }
+                if (trigger.includes('closeDeleteModal')) {
+                    closeDeleteModal();
+                }
+            }
+        });
+    </script>
+    <style>
+        a { text-decoration: none; color: inherit; }
+    </style>
+</head>
+<body>
+    {{template "admin_header" .}}
+    
+    <main class="admin-content admin-panel">
+        <div class="container">
+            {{block "content" .}}{{end}}
+        </div>
+    </main>
+
+    {{template "admin_footer" .}}
+
+    <!-- Modal containers -->
+    <div id="form-modal"></div>
+    <div id="delete-modal"></div>
+</body>
+</html>
+
+{{define "admin_header"}}
+<header class="admin-header">
+    <div class="container">
+        <h1><a href="/admin">🔧 Admin Panel</a></h1>
+        <nav>
+            <a href="/dashboard">Public Site</a>
+            {{if .User}}
+                <span style="opacity: 0.9;">{{.User.Email}}</span>
+            {{end}}
+        </nav>
+    </div>
+</header>
+{{end}}
+
+{{define "admin_footer"}}
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2025 Gojang Admin - Manage your content</p>
+    </div>
+</footer>
+{{end}}

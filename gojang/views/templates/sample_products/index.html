@@ -1,0 +1,52 @@
+<!-- Sample Products Index Template -->
+<!-- This is a simple demonstration template for the SampleProducts data model -->
+<!-- To use: Rename directory to "sampleproducts" (remove "sample_" prefix) -->
+
+<!-- {{define "title"}}Sample Products - Gojang{{end}} -->
+
+<!-- {{define "content"}} -->
+<!-- <div class="container"> -->
+<!--     <div class="page-header"> -->
+<!--         <h2>Sample Products</h2> -->
+<!--         {{if .User}} -->
+<!--         <button hx-get="/sampleproducts/new" hx-target="#modal" hx-swap="innerHTML" class="btn btn-primary"> -->
+<!--             + Add Sample Product -->
+<!--         </button> -->
+<!--         {{end}} -->
+<!--     </div> -->
+
+<!--     <div class="sampleproducts-list"> -->
+<!--         {{range .Data.SampleProducts}} -->
+<!--         <div class="card sampleproduct-card"> -->
+<!--             <h3>{{.Name}}</h3> -->
+<!--             <p class="sampleproduct-description">{{.Description}}</p> -->
+<!--             <div class="sampleproduct-info"> -->
+<!--                 <span class="price">${{printf "%.2f" .Price}}</span> -->
+<!--                 <span class="stock">Stock: {{.Stock}}</span> -->
+<!--             </div> -->
+<!--             {{if $.User}} -->
+<!--             <div class="sampleproduct-actions"> -->
+<!--                 <button  -->
+<!--                     hx-get="/sampleproducts/{{.ID}}/edit"  -->
+<!--                     hx-target="#modal"  -->
+<!--                     hx-swap="innerHTML" -->
+<!--                     class="btn-sm btn-secondary"> -->
+<!--                     Edit -->
+<!--                 </button> -->
+<!--                 <button  -->
+<!--                     hx-delete="/sampleproducts/{{.ID}}" -->
+<!--                     hx-confirm="Are you sure you want to delete this sample product?" -->
+<!--                     class="btn-sm btn-danger"> -->
+<!--                     Delete -->
+<!--                 </button> -->
+<!--             </div> -->
+<!--             {{end}} -->
+<!--         </div> -->
+<!--         {{else}} -->
+<!--         <div class="card"> -->
+<!--             <p class="text-center">No sample products available yet.</p> -->
+<!--         </div> -->
+<!--         {{end}} -->
+<!--     </div> -->
+<!-- </div> -->
+<!-- {{end}} -->

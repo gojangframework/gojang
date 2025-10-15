@@ -1,0 +1,29 @@
+<div class="modal-backdrop" onclick="this.parentElement.innerHTML = ''">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Delete Post</h3>
+            <button onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <p>Are you sure you want to delete this post?</p>
+            <p><strong>{{.Data.Post.Subject}}</strong></p>
+            <p class="text-muted">This action cannot be undone.</p>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="btn btn-secondary">
+                Cancel
+            </button>
+            <button 
+                type="button"
+                hx-delete="/posts/{{.Data.Post.ID}}" 
+                hx-target="#post-{{.Data.Post.ID}}" 
+                hx-swap="outerHTML"
+                hx-on::after-request="if(event.detail.successful) document.getElementById('modal').innerHTML = ''"
+                class="btn btn-danger">
+                Delete Post
+            </button>
+        </div>
+    </div>
+</div>

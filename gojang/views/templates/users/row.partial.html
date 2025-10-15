@@ -1,0 +1,41 @@
+{{$user := .Data.User}}
+<tr id="user-{{$user.ID}}">
+    <td>{{$user.ID}}</td>
+    <td>{{$user.Email}}</td>
+    <td>
+        <span class="badge {{if $user.IsActive}}badge-success{{else}}badge-danger{{end}}">
+            {{if $user.IsActive}}Active{{else}}Inactive{{end}}
+        </span>
+    </td>
+    <td>
+        {{if $user.IsSuperuser}}
+            <span class="badge badge-warning">Superuser</span>
+        {{else if $user.IsStaff}}
+            <span class="badge badge-info">Staff</span>
+        {{else}}
+            <span class="badge">User</span>
+        {{end}}
+    </td>
+    <td>{{$user.CreatedAt.Format "Jan 2, 2006"}}</td>
+    <td class="actions">
+        <button 
+            hx-get="/users/{{$user.ID}}/edit" 
+            hx-target="#modal" 
+            hx-swap="innerHTML"
+            class="btn-sm btn-secondary">
+            Edit
+        </button>
+        <button 
+            hx-delete="/users/{{$user.ID}}" 
+            hx-confirm="Are you sure you want to delete this user?"
+            hx-target="#user-{{$user.ID}}" 
+            hx-swap="outerHTML swap:1s"
+            class="btn-sm btn-danger">
+            Delete
+        </button>
+    </td>
+</tr>
+<script>
+    // Close modal after successful update
+    document.getElementById('modal').innerHTML = '';
+</script>

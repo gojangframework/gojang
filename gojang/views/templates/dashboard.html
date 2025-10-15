@@ -1,0 +1,43 @@
+{{define "title"}}Dashboard - Gojang{{end}}
+
+{{define "content"}}
+<div class="container">
+    <div class="dashboard">
+        <h2>Welcome, {{.User.Email}}!</h2>
+        
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Your Profile</h3>
+                <p><strong>Email:</strong> {{.User.Email}}</p>
+                <p><strong>Status:</strong> {{if .User.IsActive}}Active{{else}}Inactive{{end}}</p>
+                <p><strong>Role:</strong> 
+                    {{if .User.IsSuperuser}}Superuser{{else if .User.IsStaff}}Staff{{else}}User{{end}}
+                </p>
+                <p><strong>Member since:</strong> {{.User.CreatedAt.Format "Jan 2, 2006"}}</p>
+            </div>
+
+            {{if .User.IsStaff}}
+            <div class="card">
+                <h3>Admin Quick Links</h3>
+                <ul class="quick-links">
+                    <li><a href="/admin">Admin Panel</a></li>
+                </ul>
+            </div>
+            {{end}}
+
+            <div class="card">
+                <h3>Getting Started</h3>
+                <h4>This is a Django-like web framework built with Go and htmx.</h4>
+                <ul style="padding: 16px;">
+                    <li>Server-rendered templates with htmx</li>
+                    <li>Ent ORM for type-safe database access</li>
+                    <li>Secure sessions and authentication</li>
+                    <li>CSRF protection built-in</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal"></div>
+{{end}}

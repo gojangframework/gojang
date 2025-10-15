@@ -1,0 +1,29 @@
+{{define "title"}}{{.Data.Config.NamePlural}} - Admin{{end}}
+
+{{define "content"}}
+{{$config := .Data.Config}}
+{{$records := .Data.Records}}
+{{$modelNameLower := $config.Name | lower}}
+
+<div class="admin-container">
+    <div class="admin-index-header">
+        <div class="admin-header-left">
+            <a href="/admin" class="admin-btn-back">← Back</a>
+            <h1>{{$config.Icon}} {{$config.NamePlural}}</h1>
+        </div>
+        <button 
+            hx-get="/admin/{{$modelNameLower}}/new"
+            hx-target="#form-modal"
+            hx-swap="innerHTML"
+            class="admin-btn-primary">+ Add {{$config.Name}}</button>
+    </div>
+
+    <div class="admin-table-container" id="{{$modelNameLower}}-list">
+        {{template "model_list.partial.html" .}}
+    </div>
+</div>
+
+<!-- Form modal container -->
+<div id="form-modal"></div>
+
+{{end}}

@@ -1,0 +1,102 @@
+{{define "title"}}Admin Dashboard - Gojang{{end}}
+
+{{define "content"}}
+{{$models := .Data.Models}}
+
+<div class="admin-container">
+    <div class="admin-page-header">
+        <h1>Data Models</h1>
+    </div>
+
+    <div class="admin-dashboard-grid" id="dashboard-grid">
+        {{range $models}}
+        <a href="/admin/{{.Name | lower}}" class="model-card" draggable="true" data-model="{{.Name}}">
+            <div class="model-icon">{{.Icon}}</div>
+            <div class="model-info">
+                <h3>{{.NamePlural}}</h3>
+                <p class="model-description">Manage {{.NamePlural | lower}}</p>
+            </div>
+        </a>
+        {{end}}
+    </div>
+    
+    <div id="order-notification" class="admin-order-notification"></div>
+
+    {{if not $models}}
+    <div class="admin-empty-dashboard">
+        <p>No models registered. Check your admin configuration.</p>
+    </div>
+    {{end}}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.getElementById('dashboard-grid');
+    const cards = grid.querySelectorAll('.model-card');
+    const notification = document.getElementById('order-notification');
+    
+    let draggedElement = null;
+    
+    cards.forEach(card => {
+        card.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+        
+        card.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            cards.forEach(c => c.classList.remove('drag-over'));
+            saveModelOrder();
+        });
+        
+        card.addEventListener('dragover', function(e) {
+            if (e.preventDefault) { e.preventDefault(); }
+            e.dataTransfer.dropEffect = 'move';
+            cards.forEach(c => c.classList.remove('drag-over'));
+            if (this !== draggedElement) { this.classList.add('drag-over'); }
+            return false;
+        });
+        
+        card.addEventListener('dragenter', function(e) { if (this !== draggedElement) { this.classList.add('drag-over'); } });
+        card.addEventListener('dragleave', function(e) { this.classList.remove('drag-over'); });
+        
+        card.addEventListener('drop', function(e) {
+            if (e.stopPropagation) { e.stopPropagation(); }
+            if (draggedElement !== this) {
+                const allCards = Array.from(grid.querySelectorAll('.model-card'));
+                const draggedIndex = allCards.indexOf(draggedElement);
+                const targetIndex = allCards.indexOf(this);
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+            }
+            this.classList.remove('drag-over');
+            return false;
+        });
+    });
+    
+    function saveModelOrder() {
+        const cards = grid.querySelectorAll('.model-card');
+        const order = Array.from(cards).map(card => card.dataset.model);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        fetch('/admin/settings/model-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ order: order })
+        })
+        .then(response => { if (response.ok) { showNotification('Model order saved!'); } })
+        .catch(error => { console.error('Error saving order:', error); });
+    }
+    
+    function showNotification(message) {
+        notification.textContent = message;
+        notification.classList.add('show');
+        setTimeout(() => { notification.classList.remove('show'); }, 2000);
+    }
+});
+</script>
+{{end}}

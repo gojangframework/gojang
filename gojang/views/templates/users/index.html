@@ -1,0 +1,73 @@
+{{define "title"}}Manage Users - Gojang{{end}}
+
+{{define "content"}}
+<div class="container">
+    <div class="page-header">
+        <h2>User Management</h2>
+        <button hx-get="/admin/users/new" hx-target="#modal" hx-swap="innerHTML" class="btn btn-primary">
+            + Add User
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="table" id="user-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Data.Users}}
+                <tr id="user-{{.ID}}">
+                    <td>{{.ID}}</td>
+                    <td>{{.Email}}</td>
+                    <td>
+                        <span class="badge {{if .IsActive}}badge-success{{else}}badge-danger{{end}}">
+                            {{if .IsActive}}Active{{else}}Inactive{{end}}
+                        </span>
+                    </td>
+                    <td>
+                        {{if .IsSuperuser}}
+                            <span class="badge badge-warning">Superuser</span>
+                        {{else if .IsStaff}}
+                            <span class="badge badge-info">Staff</span>
+                        {{else}}
+                            <span class="badge">User</span>
+                        {{end}}
+                    </td>
+                    <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+                    <td class="actions">
+                        <button 
+                            hx-get="/admin/users/{{.ID}}/edit" 
+                            hx-target="#modal" 
+                            hx-swap="innerHTML"
+                            class="btn-sm btn-secondary">
+                            Edit
+                        </button>
+                        <button 
+                            hx-get="/admin/users/{{.ID}}/delete" 
+                            hx-target="#modal" 
+                            hx-swap="innerHTML"
+                            class="btn-sm btn-danger">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="6" class="text-center">No users found</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal container -->
+<div id="modal" class="modal"></div>
+{{end}}

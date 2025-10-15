@@ -1,0 +1,22 @@
+<tr id="post-{{.Data.Post.ID}}">
+    <td>{{.Data.Post.ID}}</td>
+    <td>{{.Data.Post.Subject}}</td>
+    <td>{{if .Data.Post.Edges.Author}}{{.Data.Post.Edges.Author.Email}}{{else}}Unknown{{end}}</td>
+    <td>{{.Data.Post.CreatedAt.Format "Jan 2, 2006"}}</td>
+    <td class="actions">
+        <button 
+            hx-get="/admin/posts/{{.Data.Post.ID}}/edit" 
+            hx-target="#modal" 
+            hx-swap="innerHTML"
+            class="btn-sm btn-secondary">
+            Edit
+        </button>
+        <button 
+            hx-get="/admin/posts/{{.Data.Post.ID}}/delete" 
+            hx-target="#modal" 
+            hx-swap="innerHTML"
+            class="btn-sm btn-danger">
+            Delete
+        </button>
+    </td>
+</tr>

@@ -1,0 +1,43 @@
+<div class="modal-backdrop" onclick="this.parentElement.innerHTML = ''">
+    <div class="modal-content modal-sm" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Confirm Deletion</h3>
+            <button onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="modal-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <p>Are you sure you want to delete user <strong>{{.Data.User.Email}}</strong>?</p>
+            <p class="text-muted">This action cannot be undone.</p>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="confirm-email">Type <strong>{{.Data.User.Email}}</strong> to confirm:</label>
+                <input 
+                    type="text" 
+                    id="confirm-email-{{.Data.User.ID}}" 
+                    name="confirm_email" 
+                    placeholder="Enter email address"
+                    oninput="document.getElementById('delete-btn-{{.Data.User.ID}}').disabled = (this.value !== '{{.Data.User.Email}}')"
+                    autocomplete="off">
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button 
+                onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" 
+                class="btn btn-secondary">
+                Cancel
+            </button>
+            <button 
+                id="delete-btn-{{.Data.User.ID}}"
+                hx-delete="/admin/users/{{.Data.User.ID}}"
+                hx-headers='{"X-CSRF-Token": "{{.CSRFToken}}"}'
+                hx-target="#user-{{.Data.User.ID}}" 
+                hx-swap="outerHTML swap:1s"
+                onclick="setTimeout(() => this.closest('.modal-backdrop').parentElement.innerHTML = '', 100)"
+                class="btn btn-danger"
+                disabled>
+                Delete User
+            </button>
+        </div>
+    </div>
+</div>

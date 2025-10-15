@@ -1,0 +1,288 @@
+{{define "title"}}Home - Gojang{{end}}
+
+{{define "content"}}
+<div class="home-hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1>Welcome to Gojang</h1>
+            <p class="hero-subtitle">A Django-like web framework built with Go and htmx</p>
+            
+            {{if not .User}}
+            <div class="cta-buttons">
+                <a href="/register" class="btn btn-primary">Register</a>
+                <a href="/login" class="btn btn-secondary">Sign In</a>
+            </div>
+            {{else}}
+            <div class="cta-buttons">
+                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<section class="features-section">
+    <div class="container">
+        <div class="features-header">
+            <h2>Key Features</h2>
+            <p class="features-subtitle">Everything you need to build modern web applications</p>
+        </div>
+        
+        <div class="highlight-cards">
+            <div class="highlight-card">
+                <div class="highlight-icon">⚡</div>
+                <h3>Lightning Fast</h3>
+                <p>Built on Go for blazing performance with type-safe development</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🔒</div>
+                <h3>Secure by Default</h3>
+                <p>CSRF protection, Argon2id hashing, and secure sessions built-in</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🎨</div>
+                <h3>Modern Stack</h3>
+                <p>HTMX for dynamic UIs with server-side rendering</p>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Core Framework</h3>
+                <ul>
+                    <li>🚀 Blazing fast Go performance</li>
+                    <li>🎯 Type-safe development</li>
+                    <li>🔄 Hot reload dev server</li>
+                    <li>🛣️ Flexible routing</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Database & ORM</h3>
+                <ul>
+                    <li>🗄️ Ent ORM schema-first</li>
+                    <li>🔗 Type-safe queries</li>
+                    <li>🔀 Auto migrations</li>
+                    <li>💼 Transaction support</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Security</h3>
+                <ul>
+                    <li>🔐 Built-in authentication</li>
+                    <li>🔑 Argon2id hashing</li>
+                    <li>🛡️ CSRF protection</li>
+                    <li>⏱️ Rate limiting</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">⚙️</div>
+                <h3>Admin Panel</h3>
+                <ul>
+                    <li>🎛️ Auto-generated interface</li>
+                    <li>📋 Full CRUD operations</li>
+                    <li>✏️ Modal-based forms</li>
+                    <li>📱 Responsive design</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.home-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    text-align: center;
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    margin: 2rem 0 1rem 0;
+    font-weight: 700;
+}
+
+.hero-subtitle {
+    font-size: 1.5rem;
+    margin: 0;
+    opacity: 0.95;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Hero CTA Button Overrides */
+.home-hero .btn-primary {
+    background: #10b981;
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+    border: 2px solid white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.home-hero .btn-primary:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.home-hero .btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+    border: 2px solid white;
+    backdrop-filter: blur(10px);
+}
+
+.home-hero .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.features-section {
+    padding: 5rem 0;
+    background: #f8fafc;
+}
+
+.features-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.features-header h2 {
+    font-size: 2.5rem;
+    color: #1e293b;
+    margin: 0 0 1rem 0;
+}
+
+.features-subtitle {
+    font-size: 1.25rem;
+    color: #64748b;
+}
+
+.highlight-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.highlight-card {
+    background: white;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transition: all 0.3s ease;
+}
+
+.highlight-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.highlight-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.highlight-card h3 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0 0 1rem 0;
+}
+
+.highlight-card p {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+}
+
+.feature-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+    font-size: 1.25rem;
+    color: #1e293b;
+    margin: 0 0 1rem 0;
+}
+
+.feature-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.feature-card li {
+    padding: 0.5rem 0;
+    color: #64748b;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.feature-card li:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 1200px) {
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+    
+    .highlight-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cta-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{{end}}

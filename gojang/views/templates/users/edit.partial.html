@@ -1,0 +1,63 @@
+<div class="modal-backdrop" onclick="this.parentElement.innerHTML = ''">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Edit User</h3>
+            <button onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="modal-close">&times;</button>
+        </div>
+
+        {{$user := .Data.User}}
+        <form hx-put="/admin/users/{{$user.ID}}" hx-target="#user-{{$user.ID}}" hx-swap="outerHTML" class="form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{$user.Email}}" required>
+                {{if index .Errors "Email"}}
+                    <span class="error">{{index .Errors "Email"}}</span>
+                {{end}}
+            </div>
+
+            <div class="form-group">
+                <label for="password">New Password (leave blank to keep current)</label>
+                <input type="password" id="password" name="password">
+                {{if index .Errors "Password"}}
+                    <span class="error">{{index .Errors "Password"}}</span>
+                {{end}}
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox">
+                    <input type="checkbox" name="is_active" value="true" {{if $user.IsActive}}checked{{end}}>
+                    Active
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox">
+                    <input type="checkbox" name="is_staff" value="true" {{if $user.IsStaff}}checked{{end}}>
+                    Staff
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox">
+                    <input type="checkbox" name="is_superuser" value="true" {{if $user.IsSuperuser}}checked{{end}}>
+                    Superuser
+                </label>
+            </div>
+
+            {{if index .Errors "general"}}
+                <div class="alert alert-error">
+                    {{index .Errors "general"}}
+                </div>
+            {{end}}
+
+            <div class="modal-footer">
+                <button type="button" onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="btn btn-secondary">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">Update User</button>
+            </div>
+        </form>
+    </div>
+</div>

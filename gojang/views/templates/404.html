@@ -1,0 +1,54 @@
+{{define "title"}}404 Not Found - Gojang{{end}}
+
+{{define "content"}}
+<div class="container">
+    <div class="error-page" style="text-align: center; padding: 4rem 2rem;">
+        <h1 style="font-size: 6rem; color: #e74c3c; margin: 0;">404</h1>
+        <h2 style="font-size: 2rem; color: #34495e; margin: 1rem 0;">Page Not Found</h2>
+        <p style="font-size: 1.2rem; color: #7f8c8d; margin: 1rem 0;">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div style="margin-top: 2rem;">
+            <a href="/" class="btn btn-primary" style="margin-right: 1rem;">Go Home</a>
+            <a href="javascript:history.back()" class="btn btn-secondary">Go Back</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+</style>
+{{end}}

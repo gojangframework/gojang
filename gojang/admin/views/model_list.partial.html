@@ -1,0 +1,52 @@
+{{$config := .Data.Config}}
+{{$records := .Data.Records}}
+{{$modelNameLower := $config.Name | lower}}
+
+<table class="admin-table">
+    <thead>
+        <tr>
+            {{range $config.ListFields}}
+            <th>{{.}}</th>
+            {{end}}
+            <th class="admin-actions-col">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{if $records}}
+            {{range $record := $records}}
+            <tr>
+                {{range $config.ListFields}}
+                <td>{{fieldValue $record .}}</td>
+                {{end}}
+                <td class="admin-actions-col">
+                    <div class="admin-action-buttons">
+                        <button 
+                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/edit"
+                            hx-target="#form-modal"
+                            hx-swap="innerHTML"
+                            class="admin-btn-sm admin-btn-edit">Edit</button>
+                        <button 
+                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/delete"
+                            hx-target="#delete-modal"
+                            hx-swap="innerHTML"
+                            class="admin-btn-sm admin-btn-delete">
+                            Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {{end}}
+        {{else}}
+            <tr>
+                <td colspan="{{len $config.ListFields | add 1}}" class="admin-empty-state">
+                    No {{$config.NamePlural | lower}} found.
+                </td>
+            </tr>
+        {{end}}
+    </tbody>
+</table>
+
+<!-- Delete confirmation modal container -->
+<div id="delete-modal"></div>
+
+<!-- admin styles moved to /admin/static/css/admin.css -->
