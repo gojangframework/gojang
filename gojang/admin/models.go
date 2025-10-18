@@ -84,7 +84,7 @@ func RegisterModels(registry *Registry) {
 	})
 
 	// Register SampleProduct model - example for demonstration
-	// TODO: Uncomment when SampleProduct model exists
+	// Uncomment when SampleProduct model exists
 	// registry.RegisterSampleModel(ModelRegistration{
 	// 	ModelType:      &models.SampleProduct{},
 	// 	Icon:           "📦",
