@@ -290,6 +290,13 @@ main {
     width: auto;
 }
 
+.form-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
 .error {
     color: var(--danger);
     font-size: 0.875rem;

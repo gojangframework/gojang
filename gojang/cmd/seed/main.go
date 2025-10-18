@@ -44,6 +44,14 @@ func main() {
 		}
 	}
 
+	// Display password requirements
+	fmt.Println("\n📋 Password Requirements:")
+	fmt.Println("   • At least 10 characters")
+	fmt.Println("   • At least one uppercase letter")
+	fmt.Println("   • At least one lowercase letter")
+	fmt.Println("   • At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+	fmt.Println()
+
 	// Prompt for email
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Email: ")
@@ -72,8 +80,10 @@ func main() {
 	fmt.Println()
 
 	password := string(passwordBytes)
-	if len(password) < 8 {
-		log.Fatal("Password must be at least 8 characters")
+
+	// Validate password complexity
+	if err := utils.ValidatePasswordComplexity(password); err != nil {
+		log.Fatalf("Password does not meet complexity requirements: %v", err)
 	}
 
 	// Hash password

@@ -138,6 +138,9 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 	if len(errors) > 0 {
 		h.Renderer.Render(w, r, "auth/register.html", &renderers.TemplateData{
 			Errors: errors,
+			Data: map[string]interface{}{
+				"Email": form.Email,
+			},
 		})
 		return
 	}
@@ -151,6 +154,9 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 	if exists {
 		h.Renderer.Render(w, r, "auth/register.html", &renderers.TemplateData{
 			Errors: map[string]string{"Email": "Email already registered"},
+			Data: map[string]interface{}{
+				"Email": form.Email,
+			},
 		})
 		return
 	}
