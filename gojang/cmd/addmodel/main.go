@@ -262,8 +262,8 @@ func executeModelCreation(projectRoot, modelName, modelIcon string, fields []Fie
 	// Step 2: Generate Ent code
 	fmt.Println()
 	fmt.Println("⚙️  Step 2: Generating Ent code...")
-	modelsDir := filepath.Join(projectRoot, "gojang", "models")
-	if err := generateEntCode(modelsDir); err != nil {
+	modelsPath := filepath.Join(projectRoot, "gojang", "models")
+	if err := generateEntCode(modelsPath); err != nil {
 		log.Fatalf("❌ Failed to generate Ent code: %v", err)
 	}
 	fmt.Println("✅ Ent code generated")
@@ -307,11 +307,11 @@ func executeModelCreation(projectRoot, modelName, modelIcon string, fields []Fie
 	// Step 7: Create templates
 	fmt.Println()
 	fmt.Println("📝 Step 7: Creating templates...")
-	templateDir := filepath.Join(projectRoot, "gojang", "views", "templates", strings.ToLower(modelName)+"s")
-	if err := createTemplates(templateDir, modelName, fields); err != nil {
+	templatePath := filepath.Join(projectRoot, "gojang", "views", "templates", strings.ToLower(modelName)+"s")
+	if err := createTemplates(templatePath, modelName, fields); err != nil {
 		log.Fatalf("❌ Failed to create templates: %v", err)
 	}
-	fmt.Printf("✅ Created templates in: %s\n", templateDir)
+	fmt.Printf("✅ Created templates in: %s\n", templatePath)
 
 	// Step 8: Register with admin panel
 	fmt.Println()
@@ -323,7 +323,7 @@ func executeModelCreation(projectRoot, modelName, modelIcon string, fields []Fie
 	fmt.Println("✅ Registered with admin panel")
 
 	// Success message
-	printSuccessMessage(modelName, isDryRun, schemaPath, modelsDir, formsPath, handlerPath, routesPath, mainPath, templateDir, adminModelsPath)
+	printSuccessMessage(modelName, isDryRun, schemaPath, modelsPath, formsPath, handlerPath, routesPath, mainPath, templatePath, adminModelsPath)
 }
 
 // printSuccessMessage prints the final success message
