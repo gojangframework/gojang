@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gojangframework/gojang/gojang/utils"
 	"golang.org/x/time/rate"
 )
 
@@ -85,6 +86,16 @@ func getRealIP(r *http.Request) string {
 	return ip
 }
 
+// logRateLimitViolation logs when a rate limit is exceeded
+func logRateLimitViolation(r *http.Request, ip string) {
+	utils.Warnw("rate_limit_exceeded",
+		"ip", ip,
+		"method", r.Method,
+		"path", r.URL.Path,
+		"user_agent", r.UserAgent(),
+	)
+}
+
 // RateLimit middleware applies rate limiting per IP address
 func RateLimit(limiter *IPRateLimiter) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -94,6 +105,20 @@ func RateLimit(limiter *IPRateLimiter) func(next http.Handler) http.Handler {
 
 			limiterForIP := limiter.GetLimiter(ip)
 			if !limiterForIP.Allow() {
+				// Log rate limit violation
+				logRateLimitViolation(r, ip)
+
+				// Set retry-after header (suggest waiting 60 seconds)
+				w.Header().Set("Retry-After", "60")
+
+				// Check if it's an HTMX request
+				if r.Header.Get("HX-Request") == "true" {
+					w.Header().Set("HX-Reswap", "innerHTML")
+					w.WriteHeader(http.StatusTooManyRequests)
+					w.Write([]byte(`<div class="alert alert-error">Too many requests. Please wait a moment and try again.</div>`))
+					return
+				}
+
 				http.Error(w, "Too many requests. Please try again later.", http.StatusTooManyRequests)
 				return
 			}

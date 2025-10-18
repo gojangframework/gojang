@@ -110,6 +110,12 @@ func main() {
 
 	// Auth routes (must be mounted before "/" to avoid conflicts)
 	authLimiter := middleware.AuthRateLimiter()
+
+	// Start cleanup routine for rate limiter (cleanup every 5 minutes)
+	cleanupDone := make(chan struct{})
+	defer close(cleanupDone)
+	go authLimiter.StartCleanupRoutine(5*time.Minute, cleanupDone)
+
 	r.Group(func(auth chi.Router) {
 		auth.Use(nosurf.NewPure)
 		auth.Get("/login", authHandler.LoginGET)
