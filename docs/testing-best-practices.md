@@ -1027,7 +1027,7 @@ go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//' |
 6. **Don't ignore test failures**
    ```go
    // ❌ Bad
-   // TODO: fix this test
+   // fix this test
    // t.Skip("broken")
    ```
 

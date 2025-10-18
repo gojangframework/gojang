@@ -42,7 +42,7 @@ type PostForm struct {
 }
 
 // ProductForm represents product create/update form
-// TODO: Uncomment when Product model exists
+// Uncomment when Product model exists
 // type SampleProductForm struct {
 // 	Name        string  `form:"name" validate:"required,max=255"`
 // 	Description string  `form:"description" validate:"required"`
