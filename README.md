@@ -1,5 +1,7 @@
 # Gojang Framework
 
+v0.1.0 - Initial push from dev repo. Work in progress!
+
 A modern, batteries-included web framework for Go with HTMX. Build dynamic web applications with minimal JavaScript and maximum productivity.
 
 ## 🌟 Why Gojang?
