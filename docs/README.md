@@ -678,16 +678,17 @@ CSRF_SECRET=your-csrf-secret-here
 
 ## Quick Links
 
-- 📄 [Creating Static Pages](./creating-static-pages.md)
-- ⚡ [Quick Start: Adding a Data Model](./quick-start-data-model.md) **← Start here!**
-- 📊 [Creating Data Models (Comprehensive)](./creating-data-models.md)
-- ⚡ [HTMX Integration Patterns](./htmx-patterns.md)
-- 🏗️ [Architecture: Admin & User Separation](./architecture-separation.md)
-- 🔑 [Authentication & Authorization Deep Dive](./authentication-authorization.md)
-- 🚀 [Deployment Guide](./deployment-guide.md)
-- ⚖️ [Distributed Deployment & Load Balancing](./distributed-deployment.md)
-- 🧪 [Testing Best Practices](./testing-best-practices.md)
-- 🔒 [Security Features](./SECURITY-SUMMARY.md) **← Read before production!**
-- 📋 [Taskfile Commands Guide](./taskfile-guide.md)
+- [Creating Static Pages](./creating-static-pages.md)
+- [Quick Start: Adding a Data Model](./quick-start-data-model.md) **← Start here!**
+- [Creating Data Models (Comprehensive)](./creating-data-models.md)
+- [HTMX Integration Patterns](./htmx-patterns.md)
+- [Architecture: Admin & User Separation](./architecture-separation.md)
+- [Authentication & Authorization Deep Dive](./authentication-authorization.md)
+- [Deployment Guide](./deployment-guide.md)
+- [Distributed Deployment & Load Balancing](./distributed-deployment.md)
+- [Testing Best Practices](./testing-best-practices.md)
+- [Security Features](./SECURITY-SUMMARY.md) **← Read before production!**
+- [Taskfile Commands Guide](./taskfile-guide.md)
+- [HTML Renderer Guide](./html-renderer-guide.md)
 
 ---
