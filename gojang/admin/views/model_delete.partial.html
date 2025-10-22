@@ -8,6 +8,8 @@
 {{$config := .Data.Config}}
 {{$record := .Data.Record}}
 {{$modelNameLower := $config.Name | lower}}
+{{$page := .Data.Page}}
+{{$perPage := .Data.PerPage}}
 
 <div class="admin-modal-overlay" onclick="closeDeleteModal()">
     <div class="admin-modal-content" onclick="event.stopPropagation()">
@@ -33,7 +35,7 @@
         
         <div class="admin-modal-actions">
             <button 
-                hx-delete="/admin/{{$modelNameLower}}/{{getID $record}}"
+                hx-delete="/admin/{{$modelNameLower}}/{{getID $record}}?page={{$page}}&per_page={{$perPage}}"
                 hx-target="#{{$modelNameLower}}-list"
                 hx-swap="innerHTML"
                 hx-on:htmx:after-request="closeDeleteModal()"

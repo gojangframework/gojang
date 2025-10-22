@@ -50,18 +50,49 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	records, err := config.QueryAll(r.Context())
+	// Parse pagination params
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+	offset := (page - 1) * perPage
+
+	totalCount, err := config.CountAll(r.Context())
+	if err != nil {
+		utils.Errorw("admin.count_failed", "model", config.Name, "error", err)
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to load %s", config.NamePlural))
+		return
+	}
+
+	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
 	if err != nil {
 		utils.Errorw("admin.query_failed", "model", config.Name, "error", err)
 		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to load %s", config.NamePlural))
 		return
 	}
 
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	h.Renderer.Render(w, r, "model_index.html", &TemplateData{
 		Title: config.NamePlural,
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Records": records,
+			"Config":     config,
+			"Records":    records,
+			"Page":       page,
+			"PerPage":    perPage,
+			"TotalPages": totalPages,
+			"TotalCount": totalCount,
 		},
 	})
 }
@@ -82,11 +113,27 @@ func (h *Handler) New(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get pagination params to pass to template for form submission
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+
 	h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
 		Title: "New " + config.Name,
 		Data: map[string]interface{}{
-			"Config": config,
-			"Action": "create",
+			"Config":  config,
+			"Action":  "create",
+			"Page":    page,
+			"PerPage": perPage,
 		},
 	})
 }
@@ -140,19 +187,48 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return updated list (HTMX target is set in template)
-	records, err := config.QueryAll(r.Context())
+	// Parse pagination params for the list response
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+	offset := (page - 1) * perPage
+
+	totalCount, err := config.CountAll(r.Context())
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
 		return
+	}
+
+	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
+		return
+	}
+
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
 	}
 
 	w.Header().Set("HX-Trigger", "closeFormModal")
 
 	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Records": records,
+			"Config":     config,
+			"Records":    records,
+			"Page":       page,
+			"PerPage":    perPage,
+			"TotalPages": totalPages,
+			"TotalCount": totalCount,
 		},
 	})
 }
@@ -186,11 +262,27 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get pagination params to pass to template for form submission
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+
 	h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
 		Title: "Edit " + config.Name,
 		Data: map[string]interface{}{
-			"Config": config,
-			"Record": record,
+			"Config":  config,
+			"Record":  record,
+			"Page":    page,
+			"PerPage": perPage,
 		},
 	})
 }
@@ -258,19 +350,48 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return updated list (HTMX target is set in template)
-	records, err := config.QueryAll(r.Context())
+	// Parse pagination params for the list response
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+	offset := (page - 1) * perPage
+
+	totalCount, err := config.CountAll(r.Context())
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
 		return
+	}
+
+	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
+		return
+	}
+
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
 	}
 
 	w.Header().Set("HX-Trigger", "closeFormModal")
 
 	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Records": records,
+			"Config":     config,
+			"Records":    records,
+			"Page":       page,
+			"PerPage":    perPage,
+			"TotalPages": totalPages,
+			"TotalCount": totalCount,
 		},
 	})
 }
@@ -304,12 +425,28 @@ func (h *Handler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get pagination params to pass to template for form submission
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+
 	h.Renderer.Render(w, r, "model_delete.partial.html", &TemplateData{
 		Title: "Delete " + config.Name,
 		Data: map[string]interface{}{
-			"Config": config,
-			"Record": record,
-			"ID":     id,
+			"Config":  config,
+			"Record":  record,
+			"ID":      id,
+			"Page":    page,
+			"PerPage": perPage,
 		},
 	})
 }
@@ -338,11 +475,36 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return updated list
-	records, err := config.QueryAll(r.Context())
+	// Parse pagination params for the list response
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	perPage := 20
+	if v := r.URL.Query().Get("per_page"); v != "" {
+		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
+			perPage = pp
+		}
+	}
+	offset := (page - 1) * perPage
+
+	totalCount, err := config.CountAll(r.Context())
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
 		return
+	}
+
+	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
+		return
+	}
+
+	totalPages := (totalCount + perPage - 1) / perPage
+	if totalPages < 1 {
+		totalPages = 1
 	}
 
 	// Trigger modal close via HTMX event
@@ -350,8 +512,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Records": records,
+			"Config":     config,
+			"Records":    records,
+			"Page":       page,
+			"PerPage":    perPage,
+			"TotalPages": totalPages,
+			"TotalCount": totalCount,
 		},
 	})
 }

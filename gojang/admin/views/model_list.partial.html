@@ -1,6 +1,33 @@
 {{$config := .Data.Config}}
 {{$records := .Data.Records}}
 {{$modelNameLower := $config.Name | lower}}
+{{$page := .Data.Page}}
+{{$perPage := .Data.PerPage}}
+{{$totalPages := .Data.TotalPages}}
+{{$totalCount := .Data.TotalCount}}
+
+<div class="admin-table-controls">
+    <div class="admin-controls-left">
+        <span class="admin-count-label">Total: {{$totalCount}}</span>
+    </div>
+    <div class="admin-controls-right">
+        <label for="per-page" class="admin-per-page-label">Per page:</label>
+        <select id="per-page"
+                name="per_page"
+                hx-get="/admin/{{$modelNameLower}}"
+                hx-trigger="change"
+                hx-vals='{"page": "1"}'
+                hx-target="#{{$modelNameLower}}-list"
+                hx-swap="innerHTML"
+                hx-select="#{{$modelNameLower}}-list"
+                hx-include="this"
+                class="admin-select">
+            <option value="20" {{if eq $perPage 20}}selected{{end}}>20</option>
+            <option value="50" {{if eq $perPage 50}}selected{{end}}>50</option>
+            <option value="100" {{if eq $perPage 100}}selected{{end}}>100</option>
+        </select>
+    </div>
+</div>
 
 <table class="admin-table">
     <thead>
@@ -21,12 +48,12 @@
                 <td class="admin-actions-col">
                     <div class="admin-action-buttons">
                         <button 
-                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/edit"
+                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/edit?page={{$page}}&per_page={{$perPage}}"
                             hx-target="#form-modal"
                             hx-swap="innerHTML"
                             class="admin-btn-sm admin-btn-edit">Edit</button>
                         <button 
-                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/delete"
+                            hx-get="/admin/{{$modelNameLower}}/{{getID $record}}/delete?page={{$page}}&per_page={{$perPage}}"
                             hx-target="#delete-modal"
                             hx-swap="innerHTML"
                             class="admin-btn-sm admin-btn-delete">
@@ -46,7 +73,77 @@
     </tbody>
 </table>
 
-<!-- Delete confirmation modal container -->
-<div id="delete-modal"></div>
+<div class="admin-pagination">
+    <div class="admin-page-info">
+        Page {{$page}} of {{$totalPages}}
+    </div>
+    {{if gt $totalPages 1}}
+    <div class="admin-page-buttons">
+        {{if gt $page 1}}
+        <a class="admin-btn-page" href="/admin/{{$modelNameLower}}?page={{sub $page 1}}&per_page={{$perPage}}"
+           hx-get="/admin/{{$modelNameLower}}?page={{sub $page 1}}&per_page={{$perPage}}"
+           hx-target="#{{$modelNameLower}}-list"
+           hx-swap="innerHTML"
+           hx-select="#{{$modelNameLower}}-list">← Prev</a>
+        {{end}}
+
+        {{/* Calculate page range to show */}}
+        {{$startPage := 1}}
+        {{$endPage := $totalPages}}
+        {{if gt $totalPages 7}}
+            {{if le $page 4}}
+                {{$endPage = 5}}
+            {{else if ge $page (sub $totalPages 3)}}
+                {{$startPage = sub $totalPages 4}}
+            {{else}}
+                {{$startPage = sub $page 2}}
+                {{$endPage = add $page 2}}
+            {{end}}
+        {{end}}
+
+        {{/* Show first page and ellipsis if needed */}}
+        {{if gt $startPage 1}}
+        <a class="admin-btn-page" href="/admin/{{$modelNameLower}}?page=1&per_page={{$perPage}}"
+           hx-get="/admin/{{$modelNameLower}}?page=1&per_page={{$perPage}}"
+           hx-target="#{{$modelNameLower}}-list"
+           hx-swap="innerHTML"
+           hx-select="#{{$modelNameLower}}-list">1</a>
+        {{if gt $startPage 2}}
+        <span class="admin-page-ellipsis">...</span>
+        {{end}}
+        {{end}}
+
+        {{/* Show page numbers */}}
+        {{range $i := iterate $startPage $endPage}}
+        <a class="admin-btn-page {{if eq $i $page}}active{{end}}" 
+           href="/admin/{{$modelNameLower}}?page={{$i}}&per_page={{$perPage}}"
+           hx-get="/admin/{{$modelNameLower}}?page={{$i}}&per_page={{$perPage}}"
+           hx-target="#{{$modelNameLower}}-list"
+           hx-swap="innerHTML"
+           hx-select="#{{$modelNameLower}}-list">{{$i}}</a>
+        {{end}}
+
+        {{/* Show last page and ellipsis if needed */}}
+        {{if lt $endPage $totalPages}}
+        {{if lt $endPage (sub $totalPages 1)}}
+        <span class="admin-page-ellipsis">...</span>
+        {{end}}
+        <a class="admin-btn-page" href="/admin/{{$modelNameLower}}?page={{$totalPages}}&per_page={{$perPage}}"
+           hx-get="/admin/{{$modelNameLower}}?page={{$totalPages}}&per_page={{$perPage}}"
+           hx-target="#{{$modelNameLower}}-list"
+           hx-swap="innerHTML"
+           hx-select="#{{$modelNameLower}}-list">{{$totalPages}}</a>
+        {{end}}
+
+        {{if lt $page $totalPages}}
+        <a class="admin-btn-page" href="/admin/{{$modelNameLower}}?page={{add $page 1}}&per_page={{$perPage}}"
+           hx-get="/admin/{{$modelNameLower}}?page={{add $page 1}}&per_page={{$perPage}}"
+           hx-target="#{{$modelNameLower}}-list"
+           hx-swap="innerHTML"
+           hx-select="#{{$modelNameLower}}-list">Next →</a>
+        {{end}}
+    </div>
+    {{end}}
+</div>
 
 <!-- admin styles moved to /admin/static/css/admin.css -->
