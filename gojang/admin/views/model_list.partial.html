@@ -43,7 +43,7 @@
             {{range $record := $records}}
             <tr>
                 {{range $config.ListFields}}
-                <td>{{fieldValue $record .}}</td>
+                <td>{{formatField $record .}}</td>
                 {{end}}
                 <td class="admin-actions-col">
                     <div class="admin-action-buttons">

@@ -16,7 +16,7 @@ func TestNew_WithoutHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model directly
 	config := &ModelConfig{
@@ -57,7 +57,7 @@ func TestNew_WithHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model directly
 	config := &ModelConfig{
@@ -103,7 +103,7 @@ func TestEdit_WithoutHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model directly
 	config := &ModelConfig{
@@ -145,7 +145,7 @@ func TestEdit_WithHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model with a query function that returns a mock record
 	config := &ModelConfig{
@@ -196,7 +196,7 @@ func TestDeleteConfirm_WithoutHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model directly
 	config := &ModelConfig{
@@ -238,7 +238,7 @@ func TestDeleteConfirm_WithHTMXRequest(t *testing.T) {
 		models: make(map[string]*ModelConfig),
 	}
 	// Use nil renderer since we're only testing the HTMX check logic
-	handler := NewHandler(registry, nil)
+	handler := NewHandler(registry, nil, nil)
 
 	// Register a test model with a query function
 	config := &ModelConfig{

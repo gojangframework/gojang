@@ -82,7 +82,7 @@ func main() {
 	adminRegistry := admin.NewRegistry(client)
 	// Register models with the admin system
 	admin.RegisterModels(adminRegistry)
-	adminHandler := admin.NewHandler(adminRegistry, adminRenderer)
+	adminHandler := admin.NewHandler(adminRegistry, adminRenderer, client)
 
 	// Setup router
 	r := chi.NewRouter()

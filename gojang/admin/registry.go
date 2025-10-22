@@ -51,6 +51,11 @@ func (r *Registry) RegisterModel(reg ModelRegistration) error {
 	// Use reflection to discover fields
 	fields := extractFields(reg.ModelType, override)
 
+	// Append custom fields if provided
+	if reg.CustomFields != nil {
+		fields = append(fields, reg.CustomFields...)
+	}
+
 	// Create config with generic CRUD operations
 	config := &ModelConfig{
 		Name:           modelName,

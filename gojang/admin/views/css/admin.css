@@ -291,6 +291,8 @@
 .admin-checkbox-wrapper input[type="checkbox"] { width: 1.125rem; height: 1.125rem; cursor: pointer; }
 .admin-checkbox-label { color: #475569; font-size: 0.875rem; }
 .admin-help-text { color: #64748b; font-size: 0.875rem; }
+.admin-error-text { color: #dc2626; font-size: 0.875rem; font-weight: 500; }
+.admin-error-banner { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 0.75rem 1rem; border-radius: 0.375rem; margin-bottom: 1rem; font-size: 0.875rem; }
 
 .admin-form-actions { display: flex; gap: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; }
 
