@@ -74,6 +74,16 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 			}
 			return false
 		},
+		"iterate": func(start, end int) []int {
+			if start > end {
+				return []int{}
+			}
+			result := make([]int, end-start+1)
+			for i := range result {
+				result[i] = start + i
+			}
+			return result
+		},
 		"fieldValue":     extractFieldValue,
 		"getID":          getIDValue,
 		"formatDateTime": formatDateTimeField,

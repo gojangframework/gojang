@@ -4,6 +4,10 @@
 {{$config := .Data.Config}}
 {{$records := .Data.Records}}
 {{$modelNameLower := $config.Name | lower}}
+{{$page := .Data.Page}}
+{{$perPage := .Data.PerPage}}
+{{$totalPages := .Data.TotalPages}}
+{{$totalCount := .Data.TotalCount}}
 
 <div class="admin-container">
     <div class="admin-index-header">
@@ -12,7 +16,7 @@
             <h1>{{$config.Icon}} {{$config.NamePlural}}</h1>
         </div>
         <button 
-            hx-get="/admin/{{$modelNameLower}}/new"
+            hx-get="/admin/{{$modelNameLower}}/new?page={{$page}}&per_page={{$perPage}}"
             hx-target="#form-modal"
             hx-swap="innerHTML"
             class="admin-btn-primary">+ Add {{$config.Name}}</button>
@@ -22,8 +26,5 @@
         {{template "model_list.partial.html" .}}
     </div>
 </div>
-
-<!-- Form modal container -->
-<div id="form-modal"></div>
 
 {{end}}
