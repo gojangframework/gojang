@@ -1,3 +1,7 @@
+v0.1.3 - 10/21/2025
+- admin panel update: data list pagination
+- admin panel update: user management improvement
+
 v0.1.1 - 10/18/2025
 - Password complexity requirement improved
 - Auth rate limiter enhanced
