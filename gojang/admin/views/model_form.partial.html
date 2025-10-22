@@ -9,6 +9,8 @@
 {{$record := .Data.Record}}
 {{$modelNameLower := $config.Name | lower}}
 {{$isEdit := ne $record nil}}
+{{$page := .Data.Page}}
+{{$perPage := .Data.PerPage}}
 
 <div class="admin-form-modal-overlay" onclick="closeFormModal()">
     <div class="admin-form-modal-content" onclick="event.stopPropagation()">
@@ -20,9 +22,9 @@
         <div class="form-modal-body">
         <form 
             {{if $isEdit}}
-            hx-put="/admin/{{$modelNameLower}}/{{getID $record}}"
+            hx-put="/admin/{{$modelNameLower}}/{{getID $record}}?page={{$page}}&per_page={{$perPage}}"
             {{else}}
-            hx-post="/admin/{{$modelNameLower}}"
+            hx-post="/admin/{{$modelNameLower}}?page={{$page}}&per_page={{$perPage}}"
             {{end}}
             hx-target="#{{$modelNameLower}}-list"
             hx-swap="innerHTML"
@@ -30,7 +32,7 @@
             class="admin-form">
 
             {{range $config.Fields}}
-                {{if not (contains $.Data.Config.HiddenFields .Name)}}
+                {{if not .Hidden}}
                 <div class="admin-form-group {{if .Readonly}}admin-readonly-field{{end}}">
                     <label for="{{.Name}}">{{.Label}}{{if .Readonly}} (Read-only){{end}}</label>
 
