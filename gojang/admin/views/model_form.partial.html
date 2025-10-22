@@ -11,6 +11,7 @@
 {{$isEdit := ne $record nil}}
 {{$page := .Data.Page}}
 {{$perPage := .Data.PerPage}}
+{{$errors := .Errors}}
 
 <div class="admin-form-modal-overlay" onclick="closeFormModal()">
     <div class="admin-form-modal-content" onclick="event.stopPropagation()">
@@ -20,6 +21,14 @@
         </div>
 
         <div class="form-modal-body">
+        {{if $errors}}
+        {{if index $errors "_general"}}
+        <div class="admin-error-banner">
+            {{index $errors "_general"}}
+        </div>
+        {{end}}
+        {{end}}
+        
         <form 
             {{if $isEdit}}
             hx-put="/admin/{{$modelNameLower}}/{{getID $record}}?page={{$page}}&per_page={{$perPage}}"
@@ -67,7 +76,13 @@
                             id="{{.Name}}" 
                             name="{{.Name}}"
                             {{if not $isEdit}}{{if .Required}}required{{end}}{{end}}
+                            {{if eq .Name "Password"}}minlength="10" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{10,}"{{end}}
                             placeholder="{{if $isEdit}}Leave blank to keep current password{{end}}">
+                        {{if eq .Name "Password"}}
+                        <small class="admin-help-text" style="color: #666;">
+                            Password requirements: minimum 10 characters, at least one uppercase letter, one lowercase letter, and one special character
+                        </small>
+                        {{end}}
 
                     {{else if eq .Type "email"}}
                         <input 
@@ -105,6 +120,11 @@
                     {{if .Help}}
                     <small class="admin-help-text">{{.Help}}</small>
                     {{end}}
+                    {{if $errors}}
+                    {{if index $errors .Name}}
+                    <small class="admin-error-text">{{index $errors .Name}}</small>
+                    {{end}}
+                    {{end}}
                 </div>
                 {{end}}
             {{end}}
@@ -129,6 +149,25 @@ function closeFormModal() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeFormModal();
+    }
+});
+
+// Password confirmation validation
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('Password');
+    const confirmInput = document.getElementById('PasswordConfirmation');
+    
+    if (passwordInput && confirmInput) {
+        function validatePasswordMatch() {
+            if (confirmInput.value && passwordInput.value !== confirmInput.value) {
+                confirmInput.setCustomValidity('Passwords do not match');
+            } else {
+                confirmInput.setCustomValidity('');
+            }
+        }
+        
+        passwordInput.addEventListener('change', validatePasswordMatch);
+        confirmInput.addEventListener('input', validatePasswordMatch);
     }
 });
 </script>

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,20 +10,23 @@ import (
 	"github.com/gojangframework/gojang/gojang/utils"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/http/middleware"
+	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/gojangframework/gojang/gojang/models/user"
 )
 
 // Handler handles all admin panel requests
 type Handler struct {
 	Registry *Registry
 	Renderer *AdminRenderer
+	DB       *models.Client
 }
 
 // NewHandler creates a new admin handler
-func NewHandler(registry *Registry, renderer *AdminRenderer) *Handler {
+func NewHandler(registry *Registry, renderer *AdminRenderer, db *models.Client) *Handler {
 	return &Handler{
 		Registry: registry,
 		Renderer: renderer,
+		DB:       db,
 	}
 }
 
@@ -160,13 +162,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		value := r.Form.Get(field.Name)
-		data[field.Name] = h.parseFieldValue(field, value)
+		// Special handling for checkboxes: unchecked boxes don't appear in form data
+		if field.Type == FieldTypeBool {
+			_, exists := r.Form[field.Name]
+			data[field.Name] = exists
+		} else {
+			value := r.Form.Get(field.Name)
+			data[field.Name] = h.parseFieldValue(field, value)
+		}
 	}
 
 	// Validate required fields
-	errors := h.validateFields(config, data)
+	errors := h.validateFields(config, data, true) // true = creating new record
 	if len(errors) > 0 {
+		w.Header().Set("HX-Retarget", "#form-modal")
+		w.Header().Set("HX-Reswap", "innerHTML")
 		h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
 			Title:  "New " + config.Name,
 			Errors: errors,
@@ -177,6 +187,32 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		return
+	}
+
+	// Check for duplicate email when creating a User
+	if config.Name == "User" {
+		if email, ok := data["Email"].(string); ok && email != "" {
+			exists, err := h.DB.User.Query().Where(user.EmailEQ(email)).Exist(r.Context())
+			if err != nil {
+				utils.Errorw("admin.check_email_failed", "error", err)
+				h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to check email")
+				return
+			}
+			if exists {
+				w.Header().Set("HX-Retarget", "#form-modal")
+				w.Header().Set("HX-Reswap", "innerHTML")
+				h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
+					Title:  "New " + config.Name,
+					Errors: map[string]string{"Email": "This email address is already registered"},
+					Data: map[string]interface{}{
+						"Config":   config,
+						"Action":   "create",
+						"FormData": data,
+					},
+				})
+				return
+			}
+		}
 	}
 
 	// Create the record
@@ -316,18 +352,26 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		value := r.Form.Get(field.Name)
-		data[field.Name] = h.parseFieldValue(field, value)
+		// Special handling for checkboxes: unchecked boxes don't appear in form data
+		if field.Type == FieldTypeBool {
+			_, exists := r.Form[field.Name]
+			data[field.Name] = exists
+		} else {
+			value := r.Form.Get(field.Name)
+			data[field.Name] = h.parseFieldValue(field, value)
+		}
 	}
 
-	// Validate
-	errors := h.validateFields(config, data)
+	// Validate required fields
+	errors := h.validateFields(config, data, false) // false = not creating, it's an update
 	if len(errors) > 0 {
 		record, err := config.QueryByID(r.Context(), id)
 		if err != nil {
 			h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load record")
 			return
 		}
+		w.Header().Set("HX-Retarget", "#form-modal")
+		w.Header().Set("HX-Reswap", "innerHTML")
 		h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
 			Title:  "Edit " + config.Name,
 			Errors: errors,
@@ -340,6 +384,42 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		return
+	}
+
+	// Check for duplicate email when updating a User (excluding the current user)
+	if config.Name == "User" {
+		if email, ok := data["Email"].(string); ok && email != "" {
+			exists, err := h.DB.User.Query().
+				Where(user.EmailEQ(email)).
+				Where(user.IDNEQ(id)).
+				Exist(r.Context())
+			if err != nil {
+				utils.Errorw("admin.check_email_failed", "error", err)
+				h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to check email")
+				return
+			}
+			if exists {
+				record, err := config.QueryByID(r.Context(), id)
+				if err != nil {
+					h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load record")
+					return
+				}
+				w.Header().Set("HX-Retarget", "#form-modal")
+				w.Header().Set("HX-Reswap", "innerHTML")
+				h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
+					Title:  "Edit " + config.Name,
+					Errors: map[string]string{"Email": "This email address is already registered"},
+					Data: map[string]interface{}{
+						"Config":   config,
+						"Action":   "edit",
+						"Record":   record,
+						"ID":       id,
+						"FormData": data,
+					},
+				})
+				return
+			}
+		}
 	}
 
 	// Update
@@ -560,11 +640,16 @@ func (h *Handler) parseFieldValue(field FieldConfig, value string) interface{} {
 }
 
 // validateFields validates form data
-func (h *Handler) validateFields(config *ModelConfig, data map[string]interface{}) map[string]string {
+func (h *Handler) validateFields(config *ModelConfig, data map[string]interface{}, isCreate bool) map[string]string {
 	errors := make(map[string]string)
 
 	for _, field := range config.Fields {
 		if !field.Required || field.Readonly || field.Hidden {
+			continue
+		}
+
+		// For password fields on update, skip validation if empty (optional on edit)
+		if !isCreate && field.Type == FieldTypePassword {
 			continue
 		}
 
@@ -575,11 +660,6 @@ func (h *Handler) validateFields(config *ModelConfig, data map[string]interface{
 	}
 
 	return errors
-}
-
-// GetCurrentUser helper to get current user from context
-func GetCurrentUser(ctx context.Context) interface{} {
-	return middleware.GetUser(ctx)
 }
 
 // SaveModelOrderSetting saves the model order preference

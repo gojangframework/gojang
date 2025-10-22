@@ -24,6 +24,7 @@ type ModelRegistration struct {
 	HiddenFields   []string
 	ReadonlyFields []string
 	OptionalFields []string
+	CustomFields   []FieldConfig  // Additional fields not in the struct (e.g., Password for User)
 	BeforeSave     BeforeSaveHook // Hook to transform data before save
 	QueryModifier  AfterLoadHook  // Hook to modify query (e.g., eager load relations)
 }
@@ -40,16 +41,55 @@ func RegisterModels(registry *Registry) {
 		HiddenFields:   []string{"PasswordHash"},
 		ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt", "LastLogin"},
 
+		// Add virtual Password fields for the form
+		CustomFields: []FieldConfig{
+			{
+				Name:      "Password",
+				Label:     "Password",
+				Type:      FieldTypePassword,
+				Required:  true, // Required for create, but we'll make it optional on edit in the template
+				Sensitive: true,
+				Help:      "Must be at least 10 characters with uppercase, lowercase, and special character",
+			},
+			{
+				Name:      "PasswordConfirmation",
+				Label:     "Confirm Password",
+				Type:      FieldTypePassword,
+				Required:  true, // Required for create, but we'll make it optional on edit in the template
+				Sensitive: true,
+				Help:      "Re-enter password to confirm",
+			},
+		},
+
 		// Only special logic: hash passwords before saving
 		BeforeSave: func(ctx context.Context, data map[string]interface{}) error {
-			if password, ok := data["Password"].(string); ok && password != "" {
+			password, hasPassword := data["Password"].(string)
+			passwordConfirm, hasPasswordConfirm := data["PasswordConfirmation"].(string)
+
+			// If password is provided, validate it
+			if hasPassword && password != "" {
+				// Validate password confirmation
+				if !hasPasswordConfirm || password != passwordConfirm {
+					return fmt.Errorf("password and password confirmation do not match")
+				}
+
+				// Validate password complexity
+				if err := utils.ValidatePasswordComplexity(password); err != nil {
+					return fmt.Errorf("password complexity validation failed: %w", err)
+				}
+
+				// Hash the password
 				hashedPassword, err := utils.HashPassword(password)
 				if err != nil {
 					return fmt.Errorf("hashing password: %w", err)
 				}
 				data["PasswordHash"] = hashedPassword
-				delete(data, "Password") // Remove plain password
 			}
+
+			// Clean up virtual fields
+			delete(data, "Password")
+			delete(data, "PasswordConfirmation")
+
 			return nil
 		},
 	})

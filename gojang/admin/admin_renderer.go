@@ -85,6 +85,7 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 			return result
 		},
 		"fieldValue":     extractFieldValue,
+		"formatField":    formatFieldForDisplay,
 		"getID":          getIDValue,
 		"formatDateTime": formatDateTimeField,
 	}
@@ -257,10 +258,7 @@ func extractFieldValue(obj interface{}, fieldName string) interface{} {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return field.Uint()
 	case reflect.Bool:
-		if field.Bool() {
-			return "Yes"
-		}
-		return "No"
+		return field.Bool()
 	case reflect.Struct:
 		// Handle time.Time
 		if field.Type().String() == "time.Time" {
@@ -328,4 +326,28 @@ func formatDateTimeField(obj interface{}, fieldName string) string {
 	}
 
 	return ""
+}
+
+// formatFieldForDisplay formats a field value for display in tables
+func formatFieldForDisplay(obj interface{}, fieldName string) string {
+	val := extractFieldValue(obj, fieldName)
+
+	// Format boolean values
+	if b, ok := val.(bool); ok {
+		if b {
+			return "✓ Yes"
+		}
+		return "✗ No"
+	}
+
+	// Format time values
+	if t, ok := val.(time.Time); ok {
+		if t.IsZero() {
+			return "-"
+		}
+		return t.Format("2006-01-02 15:04:05")
+	}
+
+	// Return string representation for everything else
+	return fmt.Sprintf("%v", val)
 }
