@@ -1,6 +1,6 @@
 # Gojang Framework
 
-v0.1.3 - pagination added to admin panel data list and user management improved
+v0.1.4 - UUID is used for data schema id
 
 A modern, batteries-included web framework for Go with HTMX. Build dynamic web applications with minimal JavaScript and maximum productivity.
 
