@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // Setting holds the schema definition for the Setting entity.
@@ -13,6 +14,8 @@ type Setting struct {
 // Fields of the Setting.
 func (Setting) Fields() []ent.Field {
 	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New),
 		field.String("key").
 			Unique().
 			NotEmpty().
