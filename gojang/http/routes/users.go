@@ -13,6 +13,7 @@ func UserRoutes(handler *handlers.UserHandler, sm *scs.SessionManager, client *m
 	r := chi.NewRouter()
 	r.Use(nosurf.NewPure)
 	r.Use(middleware.RequireAuth(sm, client))
+	r.Use(middleware.RequireStaffOrAdmin)
 
 	// All user management routes check permissions in handler
 	r.Get("/", handler.Index)
