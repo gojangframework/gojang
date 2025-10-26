@@ -279,26 +279,33 @@ func extractFieldValue(obj interface{}, fieldName string) interface{} {
 	}
 }
 
-// getIDValue extracts the ID field from a struct
-func getIDValue(obj interface{}) int {
+// getIDValue extracts the ID field from a struct and returns it as a string
+func getIDValue(obj interface{}) string {
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {
-		return 0
+		return ""
 	}
 
 	idField := v.FieldByName("ID")
 	if !idField.IsValid() {
-		return 0
+		return ""
 	}
 
+	// Handle int IDs (legacy or other models)
 	if idField.Kind() == reflect.Int || idField.Kind() == reflect.Int64 {
-		return int(idField.Int())
+		return fmt.Sprintf("%d", idField.Int())
 	}
 
-	return 0
+	// Handle UUID IDs
+	if idField.Type().String() == "uuid.UUID" {
+		return fmt.Sprintf("%v", idField.Interface())
+	}
+
+	// Fallback: convert to string
+	return fmt.Sprintf("%v", idField.Interface())
 }
 
 // formatDateTimeField extracts a time field and formats it for datetime-local input
