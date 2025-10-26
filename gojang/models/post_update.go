@@ -14,6 +14,7 @@ import (
 	"github.com/gojangframework/gojang/gojang/models/post"
 	"github.com/gojangframework/gojang/gojang/models/predicate"
 	"github.com/gojangframework/gojang/gojang/models/user"
+	"github.com/google/uuid"
 )
 
 // PostUpdate is the builder for updating Post entities.
@@ -64,7 +65,7 @@ func (_u *PostUpdate) SetUpdatedAt(v time.Time) *PostUpdate {
 }
 
 // SetAuthorID sets the "author" edge to the User entity by ID.
-func (_u *PostUpdate) SetAuthorID(id int) *PostUpdate {
+func (_u *PostUpdate) SetAuthorID(id uuid.UUID) *PostUpdate {
 	_u.mutation.SetAuthorID(id)
 	return _u
 }
@@ -143,7 +144,7 @@ func (_u *PostUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -168,7 +169,7 @@ func (_u *PostUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{post.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -181,7 +182,7 @@ func (_u *PostUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{post.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -244,7 +245,7 @@ func (_u *PostUpdateOne) SetUpdatedAt(v time.Time) *PostUpdateOne {
 }
 
 // SetAuthorID sets the "author" edge to the User entity by ID.
-func (_u *PostUpdateOne) SetAuthorID(id int) *PostUpdateOne {
+func (_u *PostUpdateOne) SetAuthorID(id uuid.UUID) *PostUpdateOne {
 	_u.mutation.SetAuthorID(id)
 	return _u
 }
@@ -336,7 +337,7 @@ func (_u *PostUpdateOne) sqlSave(ctx context.Context) (_node *Post, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`models: missing "Post.id" for update`)}
@@ -378,7 +379,7 @@ func (_u *PostUpdateOne) sqlSave(ctx context.Context) (_node *Post, err error) {
 			Columns: []string{post.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -391,7 +392,7 @@ func (_u *PostUpdateOne) sqlSave(ctx context.Context) (_node *Post, err error) {
 			Columns: []string{post.AuthorColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

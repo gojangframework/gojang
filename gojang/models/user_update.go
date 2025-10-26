@@ -14,6 +14,7 @@ import (
 	"github.com/gojangframework/gojang/gojang/models/post"
 	"github.com/gojangframework/gojang/gojang/models/predicate"
 	"github.com/gojangframework/gojang/gojang/models/user"
+	"github.com/google/uuid"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -126,14 +127,14 @@ func (_u *UserUpdate) ClearLastLogin() *UserUpdate {
 }
 
 // AddPostIDs adds the "posts" edge to the Post entity by IDs.
-func (_u *UserUpdate) AddPostIDs(ids ...int) *UserUpdate {
+func (_u *UserUpdate) AddPostIDs(ids ...uuid.UUID) *UserUpdate {
 	_u.mutation.AddPostIDs(ids...)
 	return _u
 }
 
 // AddPosts adds the "posts" edges to the Post entity.
 func (_u *UserUpdate) AddPosts(v ...*Post) *UserUpdate {
-	ids := make([]int, len(v))
+	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
@@ -152,14 +153,14 @@ func (_u *UserUpdate) ClearPosts() *UserUpdate {
 }
 
 // RemovePostIDs removes the "posts" edge to Post entities by IDs.
-func (_u *UserUpdate) RemovePostIDs(ids ...int) *UserUpdate {
+func (_u *UserUpdate) RemovePostIDs(ids ...uuid.UUID) *UserUpdate {
 	_u.mutation.RemovePostIDs(ids...)
 	return _u
 }
 
 // RemovePosts removes "posts" edges to Post entities.
 func (_u *UserUpdate) RemovePosts(v ...*Post) *UserUpdate {
-	ids := make([]int, len(v))
+	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
@@ -216,7 +217,7 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -256,7 +257,7 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -269,7 +270,7 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -285,7 +286,7 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -410,14 +411,14 @@ func (_u *UserUpdateOne) ClearLastLogin() *UserUpdateOne {
 }
 
 // AddPostIDs adds the "posts" edge to the Post entity by IDs.
-func (_u *UserUpdateOne) AddPostIDs(ids ...int) *UserUpdateOne {
+func (_u *UserUpdateOne) AddPostIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddPostIDs(ids...)
 	return _u
 }
 
 // AddPosts adds the "posts" edges to the Post entity.
 func (_u *UserUpdateOne) AddPosts(v ...*Post) *UserUpdateOne {
-	ids := make([]int, len(v))
+	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
@@ -436,14 +437,14 @@ func (_u *UserUpdateOne) ClearPosts() *UserUpdateOne {
 }
 
 // RemovePostIDs removes the "posts" edge to Post entities by IDs.
-func (_u *UserUpdateOne) RemovePostIDs(ids ...int) *UserUpdateOne {
+func (_u *UserUpdateOne) RemovePostIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.RemovePostIDs(ids...)
 	return _u
 }
 
 // RemovePosts removes "posts" edges to Post entities.
 func (_u *UserUpdateOne) RemovePosts(v ...*Post) *UserUpdateOne {
-	ids := make([]int, len(v))
+	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
@@ -513,7 +514,7 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	if err := _u.check(); err != nil {
 		return _node, err
 	}
-	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewUpdateSpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`models: missing "User.id" for update`)}
@@ -570,7 +571,7 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -583,7 +584,7 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -599,7 +600,7 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Columns: []string{user.PostsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

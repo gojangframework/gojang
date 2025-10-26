@@ -133,14 +133,4 @@ func RegisterModels(registry *Registry) {
 	// 	ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
 	// })
 
-
-	// Register Fruit model
-	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.Fruit{},
-		Icon:           "📄",
-		NamePlural:     "Fruits",
-		ListFields:     []string{"ID", "Name", "Stock"},
-		ReadonlyFields: []string{"ID", "CreatedAt"},
-	})
-
 }

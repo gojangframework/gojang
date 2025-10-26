@@ -14,6 +14,7 @@ import (
 	"github.com/gojangframework/gojang/gojang/models/post"
 	"github.com/gojangframework/gojang/gojang/models/predicate"
 	"github.com/gojangframework/gojang/gojang/models/user"
+	"github.com/google/uuid"
 )
 
 // PostQuery is the builder for querying Post entities.
@@ -107,8 +108,8 @@ func (_q *PostQuery) FirstX(ctx context.Context) *Post {
 
 // FirstID returns the first Post ID from the query.
 // Returns a *NotFoundError when no Post ID was found.
-func (_q *PostQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (_q *PostQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
@@ -120,7 +121,7 @@ func (_q *PostQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *PostQuery) FirstIDX(ctx context.Context) int {
+func (_q *PostQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -158,8 +159,8 @@ func (_q *PostQuery) OnlyX(ctx context.Context) *Post {
 // OnlyID is like Only, but returns the only Post ID in the query.
 // Returns a *NotSingularError when more than one Post ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *PostQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (_q *PostQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -175,7 +176,7 @@ func (_q *PostQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *PostQuery) OnlyIDX(ctx context.Context) int {
+func (_q *PostQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -203,7 +204,7 @@ func (_q *PostQuery) AllX(ctx context.Context) []*Post {
 }
 
 // IDs executes the query and returns a list of Post IDs.
-func (_q *PostQuery) IDs(ctx context.Context) (ids []int, err error) {
+func (_q *PostQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
@@ -215,7 +216,7 @@ func (_q *PostQuery) IDs(ctx context.Context) (ids []int, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *PostQuery) IDsX(ctx context.Context) []int {
+func (_q *PostQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -410,8 +411,8 @@ func (_q *PostQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Post, e
 }
 
 func (_q *PostQuery) loadAuthor(ctx context.Context, query *UserQuery, nodes []*Post, init func(*Post), assign func(*Post, *User)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*Post)
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Post)
 	for i := range nodes {
 		if nodes[i].user_posts == nil {
 			continue
@@ -452,7 +453,7 @@ func (_q *PostQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (_q *PostQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewQuerySpec(post.Table, post.Columns, sqlgraph.NewFieldSpec(post.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
