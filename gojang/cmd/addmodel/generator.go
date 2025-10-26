@@ -159,18 +159,35 @@ func createHandler(path, modelName string, fields []Field) error {
 	// Build field setters for Update
 	updateSetters := createSetters.String()
 
-	content := fmt.Sprintf(`package handlers
+	// Check if we need strconv import (for int or float fields)
+	needsStrconv := false
+	for _, field := range fields {
+		if field.Type == "int" || field.Type == "float" {
+			needsStrconv = true
+			break
+		}
+	}
 
-import (
-	"log"
-	"net/http"
+	// Build imports
+	imports := `"log"
+	"net/http"`
+	if needsStrconv {
+		imports += `
+	"strconv"`
+	}
+	imports += `
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/views/forms"
-	"github.com/gojangframework/gojang/gojang/views/renderers"
+	"github.com/gojangframework/gojang/gojang/views/renderers"`
+
+	content := fmt.Sprintf(`package handlers
+
+import (
+	%s
 )
 
 var _ time.Time // to avoid unused import
@@ -328,6 +345,8 @@ func (h *%s) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/%s", http.StatusSeeOther)
 }
 `,
+		// Imports
+		imports,
 		// Handler struct
 		handlerName, handlerName, handlerName, handlerName,
 		// Index
