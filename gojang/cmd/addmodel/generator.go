@@ -28,11 +28,17 @@ func createSchema(path, modelName string, fields []Field, includeTimestamps bool
 	}
 
 	imports := `"time"
+	
 	"entgo.io/ent"
-	"entgo.io/ent/schema/field"`
+	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"`
 
 	// Build fields code
 	var fieldsCode strings.Builder
+	
+	// Add UUID ID field as the first field
+	fieldsCode.WriteString("\t\tfield.UUID(\"id\", uuid.UUID{}).\n\t\t\tDefault(uuid.New),\n\t\t\n")
+	
 	for _, field := range fields {
 		fieldsCode.WriteString(fmt.Sprintf("\t\tfield.%s(\"%s\")", getEntFieldType(field.Type), field.Name))
 
@@ -153,18 +159,34 @@ func createHandler(path, modelName string, fields []Field) error {
 	// Build field setters for Update
 	updateSetters := createSetters.String()
 
+	// Check if we need strconv import (for int or float fields)
+	needsStrconv := false
+	for _, field := range fields {
+		if field.Type == "int" || field.Type == "float" {
+			needsStrconv = true
+			break
+		}
+	}
+
+	// Build imports
+	var importsBuilder strings.Builder
+	importsBuilder.WriteString(`"log"` + "\n\t")
+	importsBuilder.WriteString(`"net/http"`)
+	if needsStrconv {
+		importsBuilder.WriteString("\n\t" + `"strconv"`)
+	}
+	importsBuilder.WriteString("\n\t" + `"time"` + "\n\n\t")
+	importsBuilder.WriteString(`"github.com/go-chi/chi/v5"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/google/uuid"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/models"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/forms"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/renderers"`)
+	imports := importsBuilder.String()
+
 	content := fmt.Sprintf(`package handlers
 
 import (
-	"log"
-	"net/http"
-	"strconv"
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/gojangframework/gojang/gojang/views/forms"
-	"github.com/gojangframework/gojang/gojang/views/renderers"
+	%s
 )
 
 var _ time.Time // to avoid unused import
@@ -241,7 +263,12 @@ func (h *%s) Create(w http.ResponseWriter, r *http.Request) {
 
 // Edit shows the edit form
 func (h *%s) Edit(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		return
+	}
 
 	%s, err := h.Client.%s.Get(r.Context(), id)
 	if err != nil {
@@ -259,7 +286,12 @@ func (h *%s) Edit(w http.ResponseWriter, r *http.Request) {
 
 // Update updates a %s
 func (h *%s) Update(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		return
+	}
 
 	if err := r.ParseForm(); err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid form")
@@ -282,7 +314,7 @@ func (h *%s) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.Client.%s.UpdateOneID(id).
+	_, err = h.Client.%s.UpdateOneID(id).
 %s		Save(r.Context())
 
 	if err != nil {
@@ -296,7 +328,12 @@ func (h *%s) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete deletes a %s
 func (h *%s) Delete(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		return
+	}
 
 	if err := h.Client.%s.DeleteOneID(id).Exec(r.Context()); err != nil {
 		log.Printf("Error deleting %s: %%v", err)
@@ -307,6 +344,8 @@ func (h *%s) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/%s", http.StatusSeeOther)
 }
 `,
+		// Imports
+		imports,
 		// Handler struct
 		handlerName, handlerName, handlerName, handlerName,
 		// Index

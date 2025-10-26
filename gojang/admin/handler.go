@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gojangframework/gojang/gojang/utils"
+	"github.com/google/uuid"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gojangframework/gojang/gojang/models"
@@ -286,7 +287,7 @@ func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return
@@ -334,7 +335,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return
@@ -493,7 +494,7 @@ func (h *Handler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return
@@ -542,7 +543,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return

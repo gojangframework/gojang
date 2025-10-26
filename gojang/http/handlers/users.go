@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gojangframework/gojang/gojang/utils"
+	"github.com/google/uuid"
 
 	"github.com/go-chi/chi/v5"
 
@@ -127,7 +127,7 @@ func (h *UserHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid user ID")
 		return
@@ -149,7 +149,7 @@ func (h *UserHandler) Edit(w http.ResponseWriter, r *http.Request) {
 // Update updates a user
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid user ID")
 		return
@@ -208,7 +208,7 @@ func (h *UserHandler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid user ID")
 		return
@@ -230,7 +230,7 @@ func (h *UserHandler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 // Delete deletes a user
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid user ID")
 		return

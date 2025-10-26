@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/google/uuid"
 )
 
 // Registry holds all registered models
@@ -78,7 +79,7 @@ func (r *Registry) RegisterModel(reg ModelRegistration) error {
 			return r.countAll(ctx, modelName)
 		},
 
-		QueryByID: func(ctx context.Context, id int) (interface{}, error) {
+		QueryByID: func(ctx context.Context, id uuid.UUID) (interface{}, error) {
 			return r.queryByID(ctx, modelName, id, reg.QueryModifier)
 		},
 
@@ -91,7 +92,7 @@ func (r *Registry) RegisterModel(reg ModelRegistration) error {
 			return r.genericCreate(ctx, modelName, data)
 		},
 
-		UpdateFunc: func(ctx context.Context, id int, data map[string]interface{}) error {
+		UpdateFunc: func(ctx context.Context, id uuid.UUID, data map[string]interface{}) error {
 			if reg.BeforeSave != nil {
 				if err := reg.BeforeSave(ctx, data); err != nil {
 					return err
@@ -100,7 +101,7 @@ func (r *Registry) RegisterModel(reg ModelRegistration) error {
 			return r.genericUpdate(ctx, modelName, id, data)
 		},
 
-		DeleteFunc: func(ctx context.Context, id int) error {
+		DeleteFunc: func(ctx context.Context, id uuid.UUID) error {
 			return r.genericDelete(ctx, modelName, id)
 		},
 	}

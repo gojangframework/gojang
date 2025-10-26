@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
@@ -127,7 +127,7 @@ func (h *PostHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid post ID")
 		return
@@ -164,7 +164,7 @@ func (h *PostHandler) Edit(w http.ResponseWriter, r *http.Request) {
 // Update updates a post
 func (h *PostHandler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid post ID")
 		return
@@ -256,7 +256,7 @@ func (h *PostHandler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid post ID")
 		return
@@ -293,7 +293,7 @@ func (h *PostHandler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
 // Delete deletes a post
 func (h *PostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid post ID")
 		return

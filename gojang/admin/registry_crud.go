@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	"github.com/google/uuid"
 )
 
 // queryAll retrieves all records for a model using Ent client with reflection
@@ -174,7 +176,7 @@ func (r *Registry) countAll(ctx context.Context, modelName string) (int, error) 
 }
 
 // queryByID retrieves a single record by ID using reflection
-func (r *Registry) queryByID(ctx context.Context, modelName string, id int, _ AfterLoadHook) (interface{}, error) {
+func (r *Registry) queryByID(ctx context.Context, modelName string, id uuid.UUID, _ AfterLoadHook) (interface{}, error) {
 	// Get the model client using reflection (e.g., r.client.User)
 	clientVal := reflect.ValueOf(r.client).Elem()
 	modelClient := clientVal.FieldByName(modelName)
@@ -255,7 +257,7 @@ func (r *Registry) genericCreate(ctx context.Context, modelName string, data map
 }
 
 // genericUpdate updates a record using reflection
-func (r *Registry) genericUpdate(ctx context.Context, modelName string, id int, data map[string]interface{}) error {
+func (r *Registry) genericUpdate(ctx context.Context, modelName string, id uuid.UUID, data map[string]interface{}) error {
 	// Get the model client using reflection (e.g., r.client.User)
 	clientVal := reflect.ValueOf(r.client).Elem()
 	modelClient := clientVal.FieldByName(modelName)
@@ -303,7 +305,7 @@ func (r *Registry) genericUpdate(ctx context.Context, modelName string, id int, 
 }
 
 // genericDelete deletes a record using reflection
-func (r *Registry) genericDelete(ctx context.Context, modelName string, id int) error {
+func (r *Registry) genericDelete(ctx context.Context, modelName string, id uuid.UUID) error {
 	// Get the model client using reflection (e.g., r.client.User)
 	clientVal := reflect.ValueOf(r.client).Elem()
 	modelClient := clientVal.FieldByName(modelName)

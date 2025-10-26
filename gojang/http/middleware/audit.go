@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gojangframework/gojang/gojang/utils"
+	"github.com/google/uuid"
 )
 
 // AuditLogger logs important admin actions for security and compliance
@@ -15,7 +16,7 @@ type AuditLogger struct{}
 // AuditLog represents a structured audit log entry
 type AuditLog struct {
 	Timestamp time.Time
-	UserID    int
+	UserID    uuid.UUID
 	Username  string
 	Action    string
 	Resource  string
@@ -26,7 +27,7 @@ type AuditLog struct {
 }
 
 // LogAction logs an admin action
-func (a *AuditLogger) LogAction(userID int, username, action, resource, ip, userAgent string, success bool, details string) {
+func (a *AuditLogger) LogAction(userID uuid.UUID, username, action, resource, ip, userAgent string, success bool, details string) {
 	// Log to standard output (in production, send to logging service or database)
 	if success {
 		utils.Infow("audit.success",
@@ -56,7 +57,7 @@ func AuditMiddleware(next http.Handler) http.Handler {
 
 		// Get user from context
 		user := GetUserFromRequest(r)
-		var userID int
+		var userID uuid.UUID
 		var userEmail string
 		if user != nil {
 			userID = user.ID
@@ -112,7 +113,7 @@ func NewAuditLogger() *AuditLogger {
 // Helper functions for common audit log actions
 
 // LogUserCreated logs when a user is created by an admin
-func LogUserCreated(r *http.Request, targetUserID int, targetUsername string) {
+func LogUserCreated(r *http.Request, targetUserID uuid.UUID, targetUsername string) {
 	user := GetUserFromRequest(r)
 	if user == nil {
 		return
@@ -133,7 +134,7 @@ func LogUserCreated(r *http.Request, targetUserID int, targetUsername string) {
 }
 
 // LogUserUpdated logs when a user is updated
-func LogUserUpdated(r *http.Request, targetUserID int, targetUsername string) {
+func LogUserUpdated(r *http.Request, targetUserID uuid.UUID, targetUsername string) {
 	user := GetUserFromRequest(r)
 	if user == nil {
 		return
@@ -154,7 +155,7 @@ func LogUserUpdated(r *http.Request, targetUserID int, targetUsername string) {
 }
 
 // LogUserDeleted logs when a user is deleted
-func LogUserDeleted(r *http.Request, targetUserID int, targetUsername string) {
+func LogUserDeleted(r *http.Request, targetUserID uuid.UUID, targetUsername string) {
 	user := GetUserFromRequest(r)
 	if user == nil {
 		return
@@ -175,7 +176,7 @@ func LogUserDeleted(r *http.Request, targetUserID int, targetUsername string) {
 }
 
 // LogPostDeleted logs when a post is deleted by an admin
-func LogPostDeleted(r *http.Request, postID int, postTitle string) {
+func LogPostDeleted(r *http.Request, postID uuid.UUID, postTitle string) {
 	user := GetUserFromRequest(r)
 	if user == nil {
 		return

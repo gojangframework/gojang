@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/google/uuid"
 
 	"github.com/alexedwards/scs/v2"
 )
@@ -17,8 +18,8 @@ const userContextKey contextKey = "user"
 func RequireAuth(sm *scs.SessionManager, client *models.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userID := sm.GetInt(r.Context(), "user_id")
-			if userID == 0 {
+			userIDStr := sm.GetString(r.Context(), "user_id")
+			if userIDStr == "" {
 				// Check if htmx request
 				if r.Header.Get("HX-Request") == "true" {
 					w.Header().Set("HX-Redirect", "/login")
@@ -26,6 +27,14 @@ func RequireAuth(sm *scs.SessionManager, client *models.Client) func(http.Handle
 					return
 				}
 				http.Redirect(w, r, "/login?next="+r.URL.Path, http.StatusSeeOther)
+				return
+			}
+
+			// Parse UUID
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				sm.Destroy(r.Context())
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
 
@@ -59,15 +68,22 @@ func RequireStaff(next http.Handler) http.Handler {
 func LoadUser(sm *scs.SessionManager, client *models.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userID := sm.GetInt(r.Context(), "user_id")
-			if userID != 0 {
-				// Load user and add to context
-				user, err := client.User.Get(r.Context(), userID)
-				if err == nil && user.IsActive {
-					ctx := context.WithValue(r.Context(), userContextKey, user)
-					r = r.WithContext(ctx)
+			userIDStr := sm.GetString(r.Context(), "user_id")
+			if userIDStr != "" {
+				// Parse UUID
+				userID, err := uuid.Parse(userIDStr)
+				if err == nil {
+					// Load user and add to context
+					user, err := client.User.Get(r.Context(), userID)
+					if err == nil && user.IsActive {
+						ctx := context.WithValue(r.Context(), userContextKey, user)
+						r = r.WithContext(ctx)
+					} else {
+						// Invalid session, destroy it
+						sm.Destroy(r.Context())
+					}
 				} else {
-					// Invalid session, destroy it
+					// Invalid UUID in session, destroy it
 					sm.Destroy(r.Context())
 				}
 			}
