@@ -57,7 +57,31 @@ func RequireStaff(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := GetUser(r.Context())
 		if user == nil || !user.IsStaff {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequireAdmin middleware ensures user is superuser
+func RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := GetUser(r.Context())
+		if user == nil || !user.IsSuperuser {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequireStaffOrAdmin middleware ensures user is either staff or superuser
+func RequireStaffOrAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := GetUser(r.Context())
+		if user == nil || (!user.IsStaff && !user.IsSuperuser) {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
