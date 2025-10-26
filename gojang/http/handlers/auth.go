@@ -92,7 +92,7 @@ func (h *AuthHandler) LoginPOST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create session
-	h.Sessions.Put(r.Context(), "user_id", u.ID)
+	h.Sessions.Put(r.Context(), "user_id", u.ID.String())
 	h.Sessions.RenewToken(r.Context())
 
 	// Determine redirect URL (check for "next" parameter from form or query)
@@ -179,7 +179,7 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Auto-login
-	h.Sessions.Put(r.Context(), "user_id", u.ID)
+	h.Sessions.Put(r.Context(), "user_id", u.ID.String())
 	h.Sessions.RenewToken(r.Context())
 
 	// Handle htmx vs regular request

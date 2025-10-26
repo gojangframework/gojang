@@ -1,6 +1,10 @@
 package admin
 
-import "context"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 // ModelConfig defines how a model should be displayed and managed in the admin panel
 type ModelConfig struct {
@@ -16,10 +20,10 @@ type ModelConfig struct {
 	QueryAll          func(ctx context.Context) ([]interface{}, error)
 	QueryAllPaginated func(ctx context.Context, limit, offset int) ([]interface{}, error)
 	CountAll          func(ctx context.Context) (int, error)
-	QueryByID         func(ctx context.Context, id int) (interface{}, error)
+	QueryByID         func(ctx context.Context, id uuid.UUID) (interface{}, error)
 	CreateFunc        func(ctx context.Context, data map[string]interface{}) (interface{}, error)
-	UpdateFunc        func(ctx context.Context, id int, data map[string]interface{}) error
-	DeleteFunc        func(ctx context.Context, id int) error
+	UpdateFunc        func(ctx context.Context, id uuid.UUID, data map[string]interface{}) error
+	DeleteFunc        func(ctx context.Context, id uuid.UUID) error
 }
 
 // FieldConfig defines configuration for a single field

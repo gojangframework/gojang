@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 // TestNew_WithoutHTMXRequest tests that direct access to New endpoint redirects
@@ -152,9 +153,9 @@ func TestEdit_WithHTMXRequest(t *testing.T) {
 		Name:       "TestModel",
 		NamePlural: "TestModels",
 		Fields:     []FieldConfig{},
-		QueryByID: func(ctx context.Context, id int) (interface{}, error) {
+		QueryByID: func(ctx context.Context, id uuid.UUID) (interface{}, error) {
 			// Return a simple mock object
-			return struct{ ID int }{ID: id}, nil
+			return struct{ ID uuid.UUID }{ID: id}, nil
 		},
 	}
 	registry.register(config)
@@ -246,9 +247,9 @@ func TestDeleteConfirm_WithHTMXRequest(t *testing.T) {
 		NamePlural: "TestModels",
 		Fields:     []FieldConfig{},
 		ListFields: []string{"ID"},
-		QueryByID: func(ctx context.Context, id int) (interface{}, error) {
+		QueryByID: func(ctx context.Context, id uuid.UUID) (interface{}, error) {
 			// Return a simple mock object
-			return struct{ ID int }{ID: id}, nil
+			return struct{ ID uuid.UUID }{ID: id}, nil
 		},
 	}
 	registry.register(config)
