@@ -169,20 +169,19 @@ func createHandler(path, modelName string, fields []Field) error {
 	}
 
 	// Build imports
-	imports := `"log"
-	"net/http"`
+	var importsBuilder strings.Builder
+	importsBuilder.WriteString(`"log"` + "\n\t")
+	importsBuilder.WriteString(`"net/http"`)
 	if needsStrconv {
-		imports += `
-	"strconv"`
+		importsBuilder.WriteString("\n\t" + `"strconv"`)
 	}
-	imports += `
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/gojangframework/gojang/gojang/views/forms"
-	"github.com/gojangframework/gojang/gojang/views/renderers"`
+	importsBuilder.WriteString("\n\t" + `"time"` + "\n\n\t")
+	importsBuilder.WriteString(`"github.com/go-chi/chi/v5"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/google/uuid"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/models"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/forms"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/renderers"`)
+	imports := importsBuilder.String()
 
 	content := fmt.Sprintf(`package handlers
 
