@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/google/uuid"
 )
 
 // Permission constants
@@ -39,7 +40,7 @@ func CanUser(r *http.Request, permission string) bool {
 }
 
 // OwnsResource checks if user owns a resource (e.g., their own post)
-func OwnsResource(r *http.Request, resourceUserID int) bool {
+func OwnsResource(r *http.Request, resourceUserID uuid.UUID) bool {
 	user := GetUser(r.Context())
 	if user == nil {
 		return false
