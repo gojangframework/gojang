@@ -362,6 +362,8 @@ func TestCreateSchema(t *testing.T) {
 		"package schema",
 		"type Product struct",
 		"func (Product) Fields()",
+		`field.UUID("id", uuid.UUID{})`,
+		`Default(uuid.New)`,
 		`field.String("name")`,
 		`field.Float("price")`,
 		`field.Int("stock")`,
@@ -369,6 +371,7 @@ func TestCreateSchema(t *testing.T) {
 		"NotEmpty()",
 		"Positive()",
 		"Default(0)",
+		`"github.com/google/uuid"`,
 	}
 
 	for _, expected := range expectedStrings {
@@ -477,6 +480,8 @@ func TestCreateHandler(t *testing.T) {
 		"func (h *ProductHandler) Delete",
 		"SetName(form.Name)",
 		"SetPrice(form.Price)",
+		`"github.com/google/uuid"`,
+		"uuid.Parse(idStr)",
 	}
 
 	for _, expected := range expectedStrings {
