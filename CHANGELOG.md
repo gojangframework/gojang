@@ -1,3 +1,10 @@
+v0.2 - 6/16/2026
+- include view templates in builds
+- email queueing
+- Add upload hardening helpers
+- csp-options
+- rendering primitives
+
 v0.1.4 - 10/26/2025
 - UUID is used for data schema id
 - bug fix: /users limited to privileged users
