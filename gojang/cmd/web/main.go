@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/http/routes"
 	"github.com/gojangframework/gojang/gojang/models/db"
+	"github.com/gojangframework/gojang/gojang/views"
 	"github.com/gojangframework/gojang/gojang/views/renderers"
 
 	"github.com/go-chi/chi/v5"
@@ -97,11 +99,21 @@ func main() {
 	r.Use(middleware.LoadUser(sessionManager, client)) // Load user from session on all pages
 
 	// Static files (CSS and assets in views/static)
-	fileServer := http.FileServer(http.Dir("./gojang/views/static"))
+	staticFS, err := fs.Sub(views.StaticFiles, "static")
+	if err != nil {
+		utils.Errorf("Failed to create static sub-filesystem: %v", err)
+		os.Exit(1)
+	}
+	fileServer := http.FileServer(http.FS(staticFS))
 	r.Handle("/static/*", http.StripPrefix("/static", fileServer))
 
 	// Admin static files (keep admin assets in admin folder)
-	adminFileServer := http.FileServer(http.Dir("./gojang/admin/views"))
+	adminFS, err := fs.Sub(admin.ViewFiles, "views")
+	if err != nil {
+		utils.Errorf("Failed to create admin static sub-filesystem: %v", err)
+		os.Exit(1)
+	}
+	adminFileServer := http.FileServer(http.FS(adminFS))
 	r.Handle("/admin/static/*", http.StripPrefix("/admin/static", adminFileServer))
 
 	// Well-known files (security.txt, etc.)

@@ -1,11 +1,11 @@
 package admin
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -18,6 +18,9 @@ import (
 
 	"github.com/justinas/nosurf"
 )
+
+//go:embed views
+var ViewFiles embed.FS
 
 // TemplateData holds data for admin template rendering
 type TemplateData struct {
@@ -91,28 +94,31 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 	}
 
 	templates := make(map[string]*template.Template)
-	templateDir := "./gojang/admin/views"
-	basePath := filepath.Join(templateDir, "admin_base.html")
 
-	// Walk the template directory to find all .html files
-	err := filepath.Walk(templateDir, func(path string, info os.FileInfo, err error) error {
+	baseContent, err := ViewFiles.ReadFile("views/admin_base.html")
+	if err != nil {
+		return nil, fmt.Errorf("reading admin_base.html: %w", err)
+	}
+
+	var modelListContent []byte
+	modelListContent, err = ViewFiles.ReadFile("views/model_list.partial.html")
+	if err != nil {
+		utils.Debugf("parseAdminTemplates: model_list.partial.html not found: %v", err)
+	}
+
+	// Walk the embedded template directory to find all .html files
+	err = fs.WalkDir(ViewFiles, "views", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories and non-html files
-		if info.IsDir() || !strings.HasSuffix(path, ".html") {
+		if d.IsDir() || !strings.HasSuffix(path, ".html") {
 			return nil
 		}
 
-		// Get relative path from templateDir
-		relPath, err := filepath.Rel(templateDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Normalize path separators to forward slashes for cross-platform compatibility
-		relPath = filepath.ToSlash(relPath)
+		// Get relative path from views directory
+		relPath := strings.TrimPrefix(path, "views/")
 
 		// Skip admin_base.html itself and CSS directory
 		if relPath == "admin_base.html" || strings.Contains(relPath, "css/") {
@@ -125,7 +131,7 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 		var tmpl *template.Template
 		if isFragment {
 			// Parse fragment standalone
-			content, err := os.ReadFile(path)
+			content, err := ViewFiles.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("reading admin fragment %s: %w", relPath, err)
 			}
@@ -135,17 +141,25 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 			}
 		} else {
 			// Parse with admin_base.html
-			files := []string{basePath, path}
+			content, err := ViewFiles.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("reading admin page %s: %w", relPath, err)
+			}
+
+			tmpl, err = template.New("admin_base.html").Funcs(funcMap).Parse(string(baseContent))
+			if err != nil {
+				return fmt.Errorf("parsing admin_base.html: %w", err)
+			}
 
 			// For model_index.html, also include the partial
-			if relPath == "model_index.html" {
-				partialPath := filepath.Join(templateDir, "model_list.partial.html")
-				if _, err := os.Stat(partialPath); err == nil {
-					files = append(files, partialPath)
+			if relPath == "model_index.html" && len(modelListContent) > 0 {
+				tmpl, err = tmpl.New("model_list.partial.html").Parse(string(modelListContent))
+				if err != nil {
+					return fmt.Errorf("parsing model_list.partial.html: %w", err)
 				}
 			}
 
-			tmpl, err = template.New(filepath.Base(basePath)).Funcs(funcMap).ParseFiles(files...)
+			tmpl, err = tmpl.New(relPath).Parse(string(content))
 			if err != nil {
 				return fmt.Errorf("parsing admin page %s: %w", relPath, err)
 			}

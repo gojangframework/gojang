@@ -3,9 +3,8 @@ package renderers
 import (
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/gojangframework/gojang/gojang/views"
 
 	"github.com/justinas/nosurf"
 )
@@ -74,28 +74,25 @@ func parseTemplates() (map[string]*template.Template, error) {
 	}
 
 	templates := make(map[string]*template.Template)
-	templateDir := "./gojang/views/templates"
-	basePath := filepath.Join(templateDir, "base.html")
 
-	// Walk the template directory to find all .html files
-	err := filepath.Walk(templateDir, func(path string, info os.FileInfo, err error) error {
+	baseContent, err := views.TemplateFiles.ReadFile("templates/base.html")
+	if err != nil {
+		return nil, fmt.Errorf("reading base.html: %w", err)
+	}
+
+	// Walk the embedded template directory to find all .html files
+	err = fs.WalkDir(views.TemplateFiles, "templates", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories and non-html files
-		if info.IsDir() || !strings.HasSuffix(path, ".html") {
+		if d.IsDir() || !strings.HasSuffix(path, ".html") {
 			return nil
 		}
 
-		// Get relative path from templateDir
-		relPath, err := filepath.Rel(templateDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Normalize path separators to forward slashes for cross-platform compatibility
-		relPath = filepath.ToSlash(relPath)
+		// Get relative path from templates directory
+		relPath := strings.TrimPrefix(path, "templates/")
 
 		// Skip base.html itself
 		if relPath == "base.html" {
@@ -108,7 +105,7 @@ func parseTemplates() (map[string]*template.Template, error) {
 		var tmpl *template.Template
 		if isFragment {
 			// Parse fragment standalone
-			content, err := os.ReadFile(path)
+			content, err := views.TemplateFiles.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("reading fragment %s: %w", relPath, err)
 			}
@@ -118,7 +115,15 @@ func parseTemplates() (map[string]*template.Template, error) {
 			}
 		} else {
 			// Parse with base.html
-			tmpl, err = template.New(filepath.Base(basePath)).Funcs(funcMap).ParseFiles(basePath, path)
+			content, err := views.TemplateFiles.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("reading %s: %w", relPath, err)
+			}
+			tmpl, err = template.New("base.html").Funcs(funcMap).Parse(string(baseContent))
+			if err != nil {
+				return fmt.Errorf("parsing base.html: %w", err)
+			}
+			tmpl, err = tmpl.New(relPath).Parse(string(content))
 			if err != nil {
 				return fmt.Errorf("parsing %s: %w", relPath, err)
 			}

@@ -4,6 +4,22 @@ import (
 	"testing"
 )
 
+func TestNewRendererLoadsEmbeddedTemplates(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	for _, name := range []string{
+		"home.html",
+		"posts/list.partial.html",
+	} {
+		if renderer.templates[name] == nil {
+			t.Fatalf("expected embedded template %q to be loaded", name)
+		}
+	}
+}
+
 // Test template function: add
 func TestTemplateFuncAdd(t *testing.T) {
 	add := func(a, b int) int { return a + b }
