@@ -15,6 +15,16 @@ type Config struct {
 	Port         string   `env:"PORT" envDefault:"8080"`
 	AllowedHosts []string `env:"ALLOWED_HOSTS" envSeparator:","`
 
+	// Content Security Policy settings. Leave empty to use framework defaults.
+	CSPDefaultSrc               []string `env:"CSP_DEFAULT_SRC" envSeparator:","`
+	CSPScriptSrc                []string `env:"CSP_SCRIPT_SRC" envSeparator:","`
+	CSPStyleSrc                 []string `env:"CSP_STYLE_SRC" envSeparator:","`
+	CSPImgSrc                   []string `env:"CSP_IMG_SRC" envSeparator:","`
+	CSPFontSrc                  []string `env:"CSP_FONT_SRC" envSeparator:","`
+	CSPConnectSrc               []string `env:"CSP_CONNECT_SRC" envSeparator:","`
+	CSPFrameAncestors           []string `env:"CSP_FRAME_ANCESTORS" envSeparator:","`
+	CSPSameOriginFrameAncestors []string `env:"CSP_SAME_ORIGIN_FRAME_PATHS" envSeparator:","`
+
 	// Session settings
 	SessionLifetime time.Duration `env:"SESSION_LIFETIME" envDefault:"12h"`
 
