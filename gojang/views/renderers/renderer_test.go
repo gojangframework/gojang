@@ -1,10 +1,12 @@
 package renderers
 
 import (
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewRendererLoadsEmbeddedTemplates(t *testing.T) {
@@ -75,6 +77,105 @@ func TestRenderTranslatedHTMXPartial(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Crear nueva publicacion") {
 		t.Fatalf("expected translated partial content, got: %s", body)
+	}
+}
+
+func TestRenderPartialDoesNotRequireHTMXHeader(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/new", nil)
+	req.Header.Set("Accept-Language", "es-ES,es;q=0.9")
+	rec := httptest.NewRecorder()
+
+	if err := renderer.RenderPartial(rec, req, "posts/new", nil); err != nil {
+		t.Fatalf("RenderPartial returned error: %v", err)
+	}
+
+	body := rec.Body.String()
+	if strings.Contains(body, "<!DOCTYPE html>") {
+		t.Fatalf("expected partial-only output, got full page: %s", body)
+	}
+	if !strings.Contains(body, "Crear nueva publicacion") {
+		t.Fatalf("expected translated partial content, got: %s", body)
+	}
+}
+
+func TestRenderComponentTable(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	table := TableData{
+		Columns: []string{"Name", "Status"},
+		Rows: []TableRow{
+			{Cells: []interface{}{"Gojang", "Ready"}},
+		},
+		Pagination: &PaginationData{
+			Page:       1,
+			TotalPages: 2,
+			TotalCount: 3,
+			HasNext:    true,
+			NextURL:    "?page=2",
+		},
+	}
+
+	if err := renderer.RenderComponent(rec, req, "table", table); err != nil {
+		t.Fatalf("RenderComponent returned error: %v", err)
+	}
+
+	body := rec.Body.String()
+	for _, want := range []string{"<table", "Gojang", "Ready", "Page 1 of 2", `href="?page=2"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected rendered table to contain %q, got: %s", want, body)
+		}
+	}
+}
+
+func TestTemplateFuncMapReusableFunctions(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	tmpl, err := template.New("funcs").Funcs(TemplateFuncMap(renderer.translator)).Parse(`
+{{join .Words "/"}}
+{{hasPrefix .Path "/admin"}}
+{{range until 3}}{{.}}{{end}}
+{{range iterate 2 5}}{{.}}{{end}}
+{{formatDate "2006-01-02" .Date}}
+{{formatNumber .Amount}}
+<script>const payload = {{toJSON .Payload}};</script>
+`)
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+
+	var out strings.Builder
+	err = tmpl.Execute(&out, map[string]interface{}{
+		"Words":  []string{"alpha", "beta"},
+		"Path":   "/admin/users",
+		"Date":   time.Date(2026, 6, 16, 0, 0, 0, 0, time.UTC),
+		"Amount": 12.5,
+		"Payload": map[string]string{
+			"name": "gojang",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	body := out.String()
+	for _, want := range []string{"alpha/beta", "true", "012", "234", "2026-06-16", "12.50", `"name":"gojang"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected output to contain %q, got: %s", want, body)
+		}
 	}
 }
 
