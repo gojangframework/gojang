@@ -1,0 +1,50 @@
+{{define "table"}}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                {{range .Columns}}
+                    <th>{{.}}</th>
+                {{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{if .Rows}}
+                {{range .Rows}}
+                    <tr>
+                        {{range .Cells}}
+                            <td>{{.}}</td>
+                        {{end}}
+                    </tr>
+                {{end}}
+            {{else}}
+                <tr>
+                    <td colspan="{{len .Columns}}" class="text-center">
+                        {{if .EmptyMessage}}{{.EmptyMessage}}{{else}}No records found{{end}}
+                    </td>
+                </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+{{with .Pagination}}
+    <div class="pagination">
+        {{if .HasPrev}}
+            <a href="{{.PrevURL}}" class="btn btn-secondary btn-sm">Previous</a>
+        {{else}}
+            <button class="btn btn-secondary btn-sm" disabled>Previous</button>
+        {{end}}
+
+        <span class="pagination-info">
+            Page {{.Page}} of {{.TotalPages}} ({{.TotalCount}} total)
+        </span>
+
+        {{if .HasNext}}
+            <a href="{{.NextURL}}" class="btn btn-secondary btn-sm">Next</a>
+        {{else}}
+            <button class="btn btn-secondary btn-sm" disabled>Next</button>
+        {{end}}
+    </div>
+{{end}}
+{{end}}
