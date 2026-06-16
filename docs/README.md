@@ -245,7 +245,28 @@ Perfect for:
 
 ---
 
-### 10. [Security Features](./SECURITY-SUMMARY.md) 🔒
+### 10. [Rendering Primitives Guide](./rendering-primitives-guide.md)
+
+**Build reusable template functions, partials, and components**
+
+Perfect for:
+- Reusable UI components
+- Shared template functions
+- Direct partial rendering
+- Generic table and pagination rendering
+
+**Topics covered:**
+- Common template function map
+- Component template loading
+- `RenderPartial` and `RenderComponent`
+- Generic table component
+- Best practices for reusable view models
+
+**Time:** ~15 minutes to read
+
+---
+
+### 11. [Security Features](./SECURITY-SUMMARY.md) 🔒
 
 **Comprehensive overview of implemented security features**
 
@@ -270,7 +291,7 @@ Perfect for:
 
 ---
 
-### 11. [Taskfile Commands Guide](./taskfile-guide.md)
+### 12. [Taskfile Commands Guide](./taskfile-guide.md)
 
 **Master the Task automation commands for database migrations and development**
 
@@ -302,6 +323,7 @@ docs/
 ├── quick-start-data-model.md           # Tutorial: Simple data model (START HERE!)
 ├── creating-data-models.md             # Tutorial: Data models & CRUD (comprehensive)
 ├── htmx-patterns.md                    # Guide: HTMX integration patterns
+├── rendering-primitives-guide.md       # Guide: Reusable rendering primitives
 ├── authentication-authorization.md     # Guide: Auth & authorization
 ├── deployment-guide.md                 # Guide: Production deployment
 ├── distributed-deployment.md           # Guide: Load balancing & distributed setup
@@ -690,5 +712,6 @@ CSRF_SECRET=your-csrf-secret-here
 - [Security Features](./SECURITY-SUMMARY.md) **← Read before production!**
 - [Taskfile Commands Guide](./taskfile-guide.md)
 - [HTML Renderer Guide](./html-renderer-guide.md)
+- [Rendering Primitives Guide](./rendering-primitives-guide.md)
 
 ---
