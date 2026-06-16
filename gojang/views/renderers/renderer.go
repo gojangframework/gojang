@@ -13,14 +13,16 @@ import (
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/views"
+	"github.com/gojangframework/gojang/gojang/views/i18n"
 
 	"github.com/justinas/nosurf"
 )
 
 type Renderer struct {
-	templates map[string]*template.Template
-	mu        sync.RWMutex // Protects templates map
-	debug     bool
+	templates  map[string]*template.Template
+	mu         sync.RWMutex // Protects templates map
+	debug      bool
+	translator *i18n.Translator
 }
 
 // TemplateData holds data for template rendering
@@ -34,22 +36,29 @@ type TemplateData struct {
 	CurrentPath string
 	Flash       string
 	FlashType   string
+	Lang        string
 }
 
 // NewRenderer creates a new template renderer for public site
 func NewRenderer(debug bool) (*Renderer, error) {
-	tmpl, err := parseTemplates()
+	translator, err := i18n.NewTranslator()
+	if err != nil {
+		return nil, fmt.Errorf("initializing translator: %w", err)
+	}
+
+	tmpl, err := parseTemplates(translator)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Renderer{
-		templates: tmpl,
-		debug:     debug,
+		templates:  tmpl,
+		debug:      debug,
+		translator: translator,
 	}, nil
 }
 
-func parseTemplates() (map[string]*template.Template, error) {
+func parseTemplates(translator *i18n.Translator) (map[string]*template.Template, error) {
 	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
@@ -70,6 +79,20 @@ func parseTemplates() (map[string]*template.Template, error) {
 				}
 			}
 			return false
+		},
+		"t": func(data *TemplateData, key string, args ...interface{}) string {
+			lang := "en"
+			if data != nil && data.Lang != "" {
+				lang = data.Lang
+			}
+			return translator.Translate(lang, key, args...)
+		},
+		"tArray": func(data *TemplateData, key string) []string {
+			lang := "en"
+			if data != nil && data.Lang != "" {
+				lang = data.Lang
+			}
+			return translator.TranslateArray(lang, key)
 		},
 	}
 
@@ -155,10 +178,17 @@ func (r *Renderer) Render(w http.ResponseWriter, req *http.Request, name string,
 	// Check if htmx request
 	data.IsHX = req.Header.Get("HX-Request") == "true"
 	data.CurrentPath = req.URL.Path
+	if data.Lang == "" {
+		data.Lang = r.translator.DetectLanguage(req)
+	}
 
 	// Reload templates in debug mode
 	if r.debug {
-		tmpl, err := parseTemplates()
+		translator, terr := i18n.NewTranslator()
+		if terr == nil {
+			r.translator = translator
+		}
+		tmpl, err := parseTemplates(r.translator)
 		if err == nil {
 			r.mu.Lock()
 			r.templates = tmpl

@@ -1,21 +1,21 @@
 <div class="modal-backdrop" onclick="this.parentElement.innerHTML = ''">
     <div class="modal-content modal-sm" onclick="event.stopPropagation()">
         <div class="modal-header">
-            <h3>Confirm Deletion</h3>
+            <h3>{{t . "confirm_deletion"}}</h3>
             <button onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="modal-close">&times;</button>
         </div>
 
         <div class="modal-body">
-            <p>Are you sure you want to delete user <strong>{{.Data.User.Email}}</strong>?</p>
-            <p class="text-muted">This action cannot be undone.</p>
+            <p>{{t . "confirm_delete_user_with_email" .Data.User.Email}}</p>
+            <p class="text-muted">{{t . "action_cannot_undone"}}</p>
             
             <div class="form-group" style="margin-top: 1.5rem;">
-                <label for="confirm-email">Type <strong>{{.Data.User.Email}}</strong> to confirm:</label>
+                <label for="confirm-email">{{t . "type_email_to_confirm" .Data.User.Email}}</label>
                 <input 
                     type="text" 
                     id="confirm-email-{{.Data.User.ID}}" 
                     name="confirm_email" 
-                    placeholder="Enter email address"
+                    placeholder='{{t . "enter_email_address"}}'
                     oninput="document.getElementById('delete-btn-{{.Data.User.ID}}').disabled = (this.value !== '{{.Data.User.Email}}')"
                     autocomplete="off">
             </div>
@@ -25,7 +25,7 @@
             <button 
                 onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" 
                 class="btn btn-secondary">
-                Cancel
+                {{t . "cancel"}}
             </button>
             <button 
                 id="delete-btn-{{.Data.User.ID}}"
@@ -36,7 +36,7 @@
                 onclick="setTimeout(() => this.closest('.modal-backdrop').parentElement.innerHTML = '', 100)"
                 class="btn btn-danger"
                 disabled>
-                Delete User
+                {{t . "delete_user"}}
             </button>
         </div>
     </div>

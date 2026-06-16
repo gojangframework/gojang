@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{block "title" .}}Gojang{{end}}</title>
+    <title>{{block "title" .}}{{t . "app_name"}}{{end}}</title>
     <link rel="icon" type="image/x-icon" href="/static/images/gojang_favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <meta name="csrf-token" content="{{.CSRFToken}}">
     <script>
-        // Configure htmx to send CSRF token with every request
         document.addEventListener('htmx:configRequest', function(evt) {
             const token = document.querySelector('meta[name="csrf-token"]');
             if (token) {
@@ -17,18 +16,14 @@
             }
         });
 
-        // Close modal on HX-Trigger: closeModal
-        document.addEventListener('closeModal', function(evt) {
-            console.log('closeModal event received');
+        document.addEventListener('closeModal', function() {
             const modal = document.getElementById('modal');
             if (modal) {
                 modal.innerHTML = '';
             }
         });
 
-        // Alternative: Listen for htmx after swap event to close modal
         document.addEventListener('htmx:afterSwap', function(evt) {
-            // Check if the response included closeModal trigger
             const triggerHeader = evt.detail.xhr.getResponseHeader('HX-Trigger');
             if (triggerHeader && triggerHeader.includes('closeModal')) {
                 const modal = document.getElementById('modal');
@@ -62,26 +57,37 @@
         <div class="header-content">
             <h1 class="logo">
                 <a href="/">
-                    <img src="/static/images/gojang_logo_2.png" width="100" alt="Gojang">
+                    <img src="/static/images/gojang_logo_2.png" width="100" alt="{{t . "app_name"}}">
                 </a>
             </h1>
             <nav class="nav">
                 {{if .User}}
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/posts">Posts</a>
+                    <a href="/dashboard">{{t . "dashboard"}}</a>
+                    <a href="/posts">{{t . "nav_posts"}}</a>
                     {{if .User.IsStaff}}
-                        <a href="/admin">Admin</a>
+                        <a href="/admin">{{t . "admin"}}</a>
                     {{end}}
-                    <!-- <span class="user-info">{{.User.Email}}</span> -->
                     <form hx-post="/logout" hx-swap="none" style="display: inline;">
                         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                        <button type="submit" class="btn-link btn-logout">Logout</button>
+                        <button type="submit" class="btn-link btn-logout">{{t . "logout"}}</button>
                     </form>
                 {{else}}
-                    <a href="/posts">Posts</a>
-                    <a href="/login">Login</a>
-                    <a href="/register">Register</a>
+                    <a href="/posts">{{t . "nav_posts"}}</a>
+                    <a href="/login">{{t . "login"}}</a>
+                    <a href="/register">{{t . "register"}}</a>
                 {{end}}
+                <details class="language-menu" style="display: inline-block; position: relative;">
+                    <summary style="cursor: pointer;">{{t . "language"}}</summary>
+                    <div style="position: absolute; right: 0; z-index: 10; min-width: 180px; padding: 0.5rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.375rem; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);">
+                        <a href="/set-language?lang=en" aria-current="{{if eq .Lang "en"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "english"}}</a>
+                        <a href="/set-language?lang=es" aria-current="{{if eq .Lang "es"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "spanish"}}</a>
+                        <a href="/set-language?lang=ko" aria-current="{{if eq .Lang "ko"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "korean"}}</a>
+                        <a href="/set-language?lang=ja" aria-current="{{if eq .Lang "ja"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "japanese"}}</a>
+                        <a href="/set-language?lang=th" aria-current="{{if eq .Lang "th"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "thai"}}</a>
+                        <a href="/set-language?lang=zh-hans" aria-current="{{if eq .Lang "zh-hans"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "chinese_simplified"}}</a>
+                        <a href="/set-language?lang=zh-hant" aria-current="{{if eq .Lang "zh-hant"}}true{{else}}false{{end}}" style="display: block; padding: 0.25rem 0.5rem;">{{t . "chinese_traditional"}}</a>
+                    </div>
+                </details>
             </nav>
         </div>
     </div>
@@ -91,8 +97,8 @@
 {{define "footer"}}
 <footer class="footer">
     <div class="container">
-        <p>&copy; 2025 Gojang - Django-like web framework in Go
-        <img src="/static/images/gojang-cat.gif" alt="Gojang Cat" width="60"></p>
+        <p>&copy; 2025 {{t . "app_name"}} - {{t . "footer_tagline"}}
+        <img src="/static/images/gojang-cat.gif" alt="{{t . "app_name"}}" width="60"></p>
     </div>
 </footer>
 {{end}}

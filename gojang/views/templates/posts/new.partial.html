@@ -1,7 +1,7 @@
 <div class="modal-backdrop" onclick="this.parentElement.innerHTML = ''">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="modal-header">
-            <h3>Create New Post</h3>
+            <h3>{{t . "create_new_post"}}</h3>
             <button onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="modal-close">&times;</button>
         </div>
 
@@ -9,7 +9,7 @@
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             
             <div class="form-group">
-                <label for="subject">Subject</label>
+                <label for="subject">{{t . "subject"}}</label>
                 <input type="text" id="subject" name="subject" required maxlength="255">
                 {{if index .Errors "Subject"}}
                     <span class="error">{{index .Errors "Subject"}}</span>
@@ -17,7 +17,7 @@
             </div>
 
             <div class="form-group">
-                <label for="body">Body</label>
+                <label for="body">{{t . "body"}}</label>
                 <textarea id="body" name="body" rows="15" required></textarea>
                 {{if index .Errors "Body"}}
                     <span class="error">{{index .Errors "Body"}}</span>
@@ -32,9 +32,9 @@
 
             <div class="modal-footer">
                 <button type="button" onclick="this.closest('.modal-backdrop').parentElement.innerHTML = ''" class="btn btn-secondary">
-                    Cancel
+                    {{t . "cancel"}}
                 </button>
-                <button type="submit" class="btn btn-primary">Create Post</button>
+                <button type="submit" class="btn btn-primary">{{t . "create_post"}}</button>
             </div>
         </form>
     </div>

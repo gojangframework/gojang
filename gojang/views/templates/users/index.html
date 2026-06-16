@@ -1,11 +1,11 @@
-{{define "title"}}Manage Users - Gojang{{end}}
+{{define "title"}}{{t . "manage_users_title"}}{{end}}
 
 {{define "content"}}
 <div class="container">
     <div class="page-header">
-        <h2>User Management</h2>
+        <h2>{{t . "user_management"}}</h2>
         <button hx-get="/admin/users/new" hx-target="#modal" hx-swap="innerHTML" class="btn btn-primary">
-            + Add User
+            + {{t . "add_user"}}
         </button>
     </div>
 
@@ -13,12 +13,12 @@
         <table class="table" id="user-table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Role</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th>{{t . "id"}}</th>
+                    <th>{{t . "email"}}</th>
+                    <th>{{t . "status"}}</th>
+                    <th>{{t . "role"}}</th>
+                    <th>{{t . "created"}}</th>
+                    <th>{{t . "actions"}}</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,16 +28,16 @@
                     <td>{{.Email}}</td>
                     <td>
                         <span class="badge {{if .IsActive}}badge-success{{else}}badge-danger{{end}}">
-                            {{if .IsActive}}Active{{else}}Inactive{{end}}
+                            {{if .IsActive}}{{t $ "active"}}{{else}}{{t $ "inactive"}}{{end}}
                         </span>
                     </td>
                     <td>
                         {{if .IsSuperuser}}
-                            <span class="badge badge-warning">Superuser</span>
+                            <span class="badge badge-warning">{{t $ "superuser"}}</span>
                         {{else if .IsStaff}}
-                            <span class="badge badge-info">Staff</span>
+                            <span class="badge badge-info">{{t $ "staff"}}</span>
                         {{else}}
-                            <span class="badge">User</span>
+                            <span class="badge">{{t $ "user"}}</span>
                         {{end}}
                     </td>
                     <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
@@ -47,20 +47,20 @@
                             hx-target="#modal" 
                             hx-swap="innerHTML"
                             class="btn-sm btn-secondary">
-                            Edit
+                            {{t $ "edit"}}
                         </button>
                         <button 
                             hx-get="/admin/users/{{.ID}}/delete" 
                             hx-target="#modal" 
                             hx-swap="innerHTML"
                             class="btn-sm btn-danger">
-                            Delete
+                            {{t $ "delete"}}
                         </button>
                     </td>
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="6" class="text-center">No users found</td>
+                    <td colspan="6" class="text-center">{{t . "no_users_found"}}</td>
                 </tr>
                 {{end}}
             </tbody>

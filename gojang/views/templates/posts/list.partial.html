@@ -2,7 +2,7 @@
 <div class="card post-card" id="post-{{.ID}}">
     <h3>{{.Subject}}</h3>
     <div class="post-meta">
-        <span class="author">By: {{if .Edges.Author}}{{.Edges.Author.Email}}{{else}}Unknown{{end}}</span>
+        <span class="author">{{if .Edges.Author}}{{t $ "by_author" .Edges.Author.Email}}{{else}}{{t $ "by_author" (t $ "unknown")}}{{end}}</span>
         <span class="date">{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
     </div>
     <div class="post-body">
@@ -16,14 +16,14 @@
             hx-target="#modal" 
             hx-swap="innerHTML"
             class="btn-sm btn-secondary">
-            Edit
+            {{t $ "edit"}}
         </button>
         <button 
             hx-get="/posts/{{.ID}}/delete"
             hx-target="#modal" 
             hx-swap="innerHTML"
             class="btn-sm btn-danger">
-            Delete
+            {{t $ "delete"}}
         </button>
     </div>
     {{end}}
@@ -31,6 +31,6 @@
 </div>
 {{else}}
 <div class="card">
-    <p class="text-center">No posts yet. Be the first to create one!</p>
+    <p class="text-center">{{t . "no_posts"}}</p>
 </div>
 {{end}}

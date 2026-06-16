@@ -14,6 +14,7 @@ func PageRoutes(handler *handlers.PageHandler, sm *scs.SessionManager, client *m
 	r.Use(nosurf.NewPure)
 
 	r.Get("/", handler.Home)
+	r.Get("/set-language", handler.SetLanguage)
 
 	// Example of a public page route
 	// r.Get("/sample", handler.Sample)

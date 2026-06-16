@@ -1,8 +1,8 @@
-{{define "title"}}Sample Page - Gojang{{end}}
+{{define "title"}}{{t . "sample_page_title"}}{{end}}
 
 {{define "content"}}
 <div class="container">
-    <h1>Sample Page</h1>
-    <p>This is a sample page to demonstrate template rendering in Gojang.</p>
+    <h1>{{t . "sample_page_heading"}}</h1>
+    <p>{{t . "sample_page_body"}}</p>
 </div>
 {{end}}

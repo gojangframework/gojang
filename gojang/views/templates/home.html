@@ -1,20 +1,20 @@
-{{define "title"}}Home - Gojang{{end}}
+{{define "title"}}{{t . "home_title"}}{{end}}
 
 {{define "content"}}
 <div class="home-hero">
     <div class="container">
         <div class="hero-content">
-            <h1>Welcome to Gojang</h1>
-            <p class="hero-subtitle">A Django-like web framework built with Go and htmx</p>
+            <h1>{{t . "welcome_to_gojang"}}</h1>
+            <p class="hero-subtitle">{{t . "home_subtitle"}}</p>
             
             {{if not .User}}
             <div class="cta-buttons">
-                <a href="/register" class="btn btn-primary">Register</a>
-                <a href="/login" class="btn btn-secondary">Sign In</a>
+                <a href="/register" class="btn btn-primary">{{t . "register"}}</a>
+                <a href="/login" class="btn btn-secondary">{{t . "sign_in"}}</a>
             </div>
             {{else}}
             <div class="cta-buttons">
-                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                <a href="/dashboard" class="btn btn-primary">{{t . "go_to_dashboard"}}</a>
             </div>
             {{end}}
         </div>
@@ -24,70 +24,66 @@
 <section class="features-section">
     <div class="container">
         <div class="features-header">
-            <h2>Key Features</h2>
-            <p class="features-subtitle">Everything you need to build modern web applications</p>
+            <h2>{{t . "key_features"}}</h2>
+            <p class="features-subtitle">{{t . "features_subtitle"}}</p>
         </div>
         
         <div class="highlight-cards">
             <div class="highlight-card">
                 <div class="highlight-icon">⚡</div>
-                <h3>Lightning Fast</h3>
-                <p>Built on Go for blazing performance with type-safe development</p>
+                <h3>{{t . "lightning_fast"}}</h3>
+                <p>{{t . "lightning_fast_desc"}}</p>
             </div>
             <div class="highlight-card">
                 <div class="highlight-icon">🔒</div>
-                <h3>Secure by Default</h3>
-                <p>CSRF protection, Argon2id hashing, and secure sessions built-in</p>
+                <h3>{{t . "secure_by_default"}}</h3>
+                <p>{{t . "secure_by_default_desc"}}</p>
             </div>
             <div class="highlight-card">
                 <div class="highlight-icon">🎨</div>
-                <h3>Modern Stack</h3>
-                <p>HTMX for dynamic UIs with server-side rendering</p>
+                <h3>{{t . "modern_stack"}}</h3>
+                <p>{{t . "modern_stack_desc"}}</p>
             </div>
         </div>
 
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
-                <h3>Core Framework</h3>
+                <h3>{{t . "core_framework"}}</h3>
                 <ul>
-                    <li>🚀 Blazing fast Go performance</li>
-                    <li>🎯 Type-safe development</li>
-                    <li>🔄 Hot reload dev server</li>
-                    <li>🛣️ Flexible routing</li>
+                    {{range tArray . "framework_features"}}
+                    <li>{{.}}</li>
+                    {{end}}
                 </ul>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">💾</div>
-                <h3>Database & ORM</h3>
+                <h3>{{t . "database_orm"}}</h3>
                 <ul>
-                    <li>🗄️ Ent ORM schema-first</li>
-                    <li>🔗 Type-safe queries</li>
-                    <li>🔀 Auto migrations</li>
-                    <li>💼 Transaction support</li>
+                    {{range tArray . "orm_features"}}
+                    <li>{{.}}</li>
+                    {{end}}
                 </ul>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🔒</div>
-                <h3>Security</h3>
+                <h3>{{t . "security"}}</h3>
                 <ul>
-                    <li>🔐 Built-in authentication</li>
-                    <li>🔑 Argon2id hashing</li>
-                    <li>🛡️ CSRF protection</li>
-                    <li>⏱️ Rate limiting</li>
+                    {{range tArray . "security_features"}}
+                    <li>{{.}}</li>
+                    {{end}}
                 </ul>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">⚙️</div>
-                <h3>Admin Panel</h3>
+                <h3>{{t . "admin_panel"}}</h3>
                 <ul>
-                    <li>🎛️ Auto-generated interface</li>
-                    <li>📋 Full CRUD operations</li>
-                    <li>✏️ Modal-based forms</li>
-                    <li>📱 Responsive design</li>
+                    {{range tArray . "admin_features"}}
+                    <li>{{.}}</li>
+                    {{end}}
                 </ul>
             </div>
         </div>

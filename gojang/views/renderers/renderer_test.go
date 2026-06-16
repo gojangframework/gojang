@@ -1,6 +1,9 @@
 package renderers
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +20,61 @@ func TestNewRendererLoadsEmbeddedTemplates(t *testing.T) {
 		if renderer.templates[name] == nil {
 			t.Fatalf("expected embedded template %q to be loaded", name)
 		}
+	}
+}
+
+func TestNewRendererInitializesTranslator(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	if renderer.translator == nil {
+		t.Fatal("expected renderer translator to be initialized")
+	}
+}
+
+func TestRenderUsesAcceptLanguage(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Language", "es-ES,es;q=0.9")
+	rec := httptest.NewRecorder()
+
+	if err := renderer.Render(rec, req, "home.html", nil); err != nil {
+		t.Fatalf("Render returned error: %v", err)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, `<html lang="es">`) {
+		t.Fatalf("expected rendered body to include Spanish lang attribute, got: %s", body)
+	}
+	if !strings.Contains(body, "Bienvenido a Gojang") {
+		t.Fatalf("expected rendered body to include Spanish translation, got: %s", body)
+	}
+}
+
+func TestRenderTranslatedHTMXPartial(t *testing.T) {
+	renderer, err := NewRenderer(false)
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/new", nil)
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("Accept-Language", "es-ES,es;q=0.9")
+	rec := httptest.NewRecorder()
+
+	if err := renderer.Render(rec, req, "posts/new.partial.html", nil); err != nil {
+		t.Fatalf("Render returned error: %v", err)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "Crear nueva publicacion") {
+		t.Fatalf("expected translated partial content, got: %s", body)
 	}
 }
 

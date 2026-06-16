@@ -1,15 +1,15 @@
-{{define "title"}}Register - Gojang{{end}}
+{{define "title"}}{{t . "create_account_title"}}{{end}}
 
 {{define "content"}}
 <div class="auth-container">
     <div class="auth-box">
-        <h2>Create Account</h2>
+        <h2>{{t . "create_account"}}</h2>
         
         <form hx-post="/register" hx-target="#content" hx-swap="innerHTML" class="form">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             
             <div class="form-group">
-                <label for="email">Email</label>
+                <label for="email">{{t . "email"}}</label>
                 <input type="email" id="email" name="email" value="{{if .Data}}{{.Data.Email}}{{end}}" required autofocus>
                 {{if index .Errors "Email"}}
                     <span class="error">{{index .Errors "Email"}}</span>
@@ -17,16 +17,16 @@
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">{{t . "password"}}</label>
                 <input type="password" id="password" name="password" required minlength="10">
-                <small class="form-text">Must be at least 10 characters with uppercase, lowercase, and special character</small>
+                <small class="form-text">{{t . "password_policy"}}</small>
                 {{if index .Errors "Password"}}
                     <span class="error">{{index .Errors "Password"}}</span>
                 {{end}}
             </div>
 
             <div class="form-group">
-                <label for="password_confirm">Confirm Password</label>
+                <label for="password_confirm">{{t . "confirm_password"}}</label>
                 <input type="password" id="password_confirm" name="password_confirm" required>
                 {{if index .Errors "PasswordConfirm"}}
                     <span class="error">{{index .Errors "PasswordConfirm"}}</span>
@@ -39,11 +39,11 @@
                 </div>
             {{end}}
 
-            <button type="submit" class="btn btn-primary">Create Account</button>
+            <button type="submit" class="btn btn-primary">{{t . "create_account"}}</button>
         </form>
 
         <p class="auth-footer">
-            Already have an account? <a href="/login">Login here</a>
+            {{t . "already_have_account"}} <a href="/login">{{t . "login_here"}}</a>
         </p>
     </div>
 </div>
