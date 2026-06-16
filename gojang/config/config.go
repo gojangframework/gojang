@@ -24,6 +24,13 @@ type Config struct {
 	SMTPUser string `env:"SMTP_USER"`
 	SMTPPass string `env:"SMTP_PASS"`
 	SMTPFrom string `env:"SMTP_FROM" envDefault:"noreply@localhost"`
+
+	// Email queue settings
+	SMTPFromName     string        `env:"SMTP_FROM_NAME"`
+	EmailSendRate    int           `env:"EMAIL_SEND_RATE" envDefault:"14"`
+	EmailQueueSize   int           `env:"EMAIL_QUEUE_SIZE" envDefault:"1000"`
+	EmailWorkerCount int           `env:"EMAIL_WORKER_COUNT" envDefault:"14"`
+	EmailSendTimeout time.Duration `env:"EMAIL_SEND_TIMEOUT" envDefault:"15s"`
 }
 
 func Load() (*Config, error) {
