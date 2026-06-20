@@ -98,6 +98,7 @@ Create `.env` file (never commit to git!):
 
 ```bash
 # Server
+DEVHOST=0.0.0.0
 PORT=8080
 DEBUG=false
 ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com

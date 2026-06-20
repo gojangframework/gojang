@@ -26,6 +26,10 @@ type ModelConfig struct {
 	DeleteFunc        func(ctx context.Context, id uuid.UUID) error
 }
 
+// ResourceConfig is the admin workspace resource contract. It aliases the
+// legacy ModelConfig so existing code and generated integrations keep working.
+type ResourceConfig = ModelConfig
+
 // FieldConfig defines configuration for a single field
 type FieldConfig struct {
 	Name      string    // Field name (database column)
@@ -36,6 +40,16 @@ type FieldConfig struct {
 	Sensitive bool      // Is field sensitive (e.g., password)?
 	Hidden    bool      // Hide from forms
 	Help      string    // Help text shown below field
+
+	// Grid/workspace metadata
+	Editable   bool // Can be edited inline or in the drawer?
+	Visible    bool // Show in the grid by default?
+	Width      int  // Preferred grid column width in pixels
+	Primary    bool // Primary display field for the record
+	Sortable   bool
+	Filterable bool
+	System     bool // Internal/protected field
+	Virtual    bool // Not backed by a direct Ent struct field
 }
 
 // FieldType represents the type of field

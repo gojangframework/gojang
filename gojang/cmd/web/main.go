@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,6 +60,37 @@ func main() {
 	// Setup session manager
 	sessionManager := middleware.NewSessionManager(cfg)
 
+	// Setup email service when SMTP is configured.
+	var emailService *utils.EmailService
+	if strings.TrimSpace(cfg.SMTPHost) != "" {
+		emailService, err = utils.NewEmailService(utils.EmailConfig{
+			SMTPHost:        cfg.SMTPHost,
+			SMTPPort:        cfg.SMTPPort,
+			SMTPUser:        cfg.SMTPUser,
+			SMTPPass:        cfg.SMTPPass,
+			FromAddress:     cfg.SMTPFrom,
+			FromDisplayName: cfg.SMTPFromName,
+			MaxSendRate:     cfg.EmailSendRate,
+			QueueSize:       cfg.EmailQueueSize,
+			WorkerCount:     cfg.EmailWorkerCount,
+			SendTimeout:     cfg.EmailSendTimeout,
+		})
+		if err != nil {
+			utils.Errorf("Failed to setup email service: %v", err)
+			os.Exit(1)
+		}
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := emailService.Shutdown(shutdownCtx); err != nil {
+				utils.Warnw("email.shutdown_incomplete", "error", err)
+			}
+		}()
+		utils.Infof("Email service configured")
+	} else {
+		utils.Warnf("Email service disabled: SMTP_HOST is not configured")
+	}
+
 	// Setup renderers
 	// Public renderer: Handles public site pages with base.html wrapper
 	publicRenderer, err := renderers.NewRenderer(cfg.Debug)
@@ -97,6 +129,7 @@ func main() {
 	r.Use(middleware.SecurityHeaders(cfg))
 	r.Use(sessionManager.LoadAndSave)
 	r.Use(middleware.LoadUser(sessionManager, client)) // Load user from session on all pages
+	r.Use(nosurf.NewPure)                              // CSRF protection on all routes
 
 	// Static files (CSS and assets in views/static)
 	staticFS, err := fs.Sub(views.StaticFiles, "static")
@@ -129,7 +162,6 @@ func main() {
 	go authLimiter.StartCleanupRoutine(5*time.Minute, cleanupDone)
 
 	r.Group(func(auth chi.Router) {
-		auth.Use(nosurf.NewPure)
 		auth.Get("/login", authHandler.LoginGET)
 		auth.With(middleware.RateLimit(authLimiter)).Post("/login", authHandler.LoginPOST)
 		auth.Get("/register", authHandler.RegisterGET)
@@ -147,7 +179,7 @@ func main() {
 	r.NotFound(pageHandler.NotFound)
 
 	// Start server
-	addr := fmt.Sprintf(":%s", cfg.Port)
+	addr := net.JoinHostPort(cfg.DevHost, cfg.Port)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           r,
@@ -158,7 +190,7 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		utils.Infof("🚀 Server starting on http://localhost%s", addr)
+		utils.Infof("🚀 Server starting on http://%s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			utils.Errorf("Server error: %v", err)
 		}

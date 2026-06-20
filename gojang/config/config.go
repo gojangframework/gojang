@@ -12,6 +12,7 @@ type Config struct {
 	DatabaseURL  string   `env:"DATABASE_URL,required"`
 	SessionKey   string   `env:"SESSION_KEY,required"`
 	Debug        bool     `env:"DEBUG" envDefault:"false"`
+	DevHost      string   `env:"DEVHOST" envDefault:"0.0.0.0"`
 	Port         string   `env:"PORT" envDefault:"8080"`
 	AllowedHosts []string `env:"ALLOWED_HOSTS" envSeparator:","`
 

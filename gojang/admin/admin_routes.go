@@ -5,12 +5,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/justinas/nosurf"
 )
 
 func AdminRoutes(adminHandler *Handler, sm *scs.SessionManager, client *models.Client) chi.Router {
 	r := chi.NewRouter()
-	r.Use(nosurf.NewPure)
 	r.Use(middleware.RequireAuth(sm, client))
 	r.Use(middleware.RequireStaff)
 	r.Use(middleware.AuditMiddleware) // Log all admin actions
