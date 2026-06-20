@@ -1,6 +1,6 @@
 # Gojang Framework
 
-v0.1.4 - UUID is used for data schema id
+v0.2 - Added some changes based on what I learned from another production app that has been built on top of Gojang over the past eight months. I learned a lot about Gojang’s pros and cons, and I hope to make many improvements based on my experience running the app in production.
 
 A modern, batteries-included web framework for Go with HTMX. Build dynamic web applications with minimal JavaScript and maximum productivity.
 
