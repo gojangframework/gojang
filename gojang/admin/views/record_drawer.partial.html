@@ -1,0 +1,78 @@
+{{$config := .Data.Config}}
+{{$record := .Data.Record}}
+{{$isEdit := ne $record nil}}
+{{$errors := .Errors}}
+{{$page := .Data.Page}}
+{{$perPage := .Data.PerPage}}
+{{$gridQuery := .Data.GridQuery}}
+
+<aside class="record-drawer-panel">
+    <header class="record-drawer-header">
+        <div>
+            <span class="drawer-kicker">{{$config.Name}}</span>
+            <h2>{{if $isEdit}}Edit record{{else}}Create record{{end}}</h2>
+        </div>
+        <button class="drawer-close" type="button" onclick="closeRecordDrawer()">×</button>
+    </header>
+
+    {{if $errors}}{{if index $errors "_general"}}
+    <div class="drawer-error">{{index $errors "_general"}}</div>
+    {{end}}{{end}}
+
+    <form class="record-form"
+          {{if $isEdit}}
+          hx-put="/admin/t/{{$config.Name | lower}}/records/{{getID $record}}?{{$gridQuery}}"
+          {{else}}
+          hx-post="/admin/t/{{$config.Name | lower}}/records?{{$gridQuery}}"
+          {{end}}
+          hx-target="#workspace-grid"
+          hx-swap="innerHTML">
+
+        {{range drawerFields $config}}
+        <div class="drawer-field {{if fieldReadonlyForRecord $config $record .}}readonly{{end}}">
+            <label for="drawer-{{.Name}}">
+                {{.Label}}
+                {{if fieldReadonlyForRecord $config $record .}}<span>Locked</span>{{end}}
+            </label>
+
+            {{if fieldReadonlyForRecord $config $record .}}
+            <div class="drawer-readonly-value">{{if $isEdit}}{{cellValue $record .}}{{end}}</div>
+            {{else if eq .Type "bool"}}
+            <label class="drawer-checkbox">
+                <input type="hidden" name="{{.Name}}__present" value="true">
+                <input id="drawer-{{.Name}}" type="checkbox" name="{{.Name}}" value="true" {{if $isEdit}}{{if boolValue $record .}}checked{{end}}{{else}}{{if boolCreateValue .}}checked{{end}}{{end}}>
+                <span>{{.Label}}</span>
+            </label>
+            {{else if eq .Type "text"}}
+            <textarea id="drawer-{{.Name}}" name="{{.Name}}" rows="5" {{if .Required}}required{{end}}>{{if $isEdit}}{{inputValue $record .}}{{end}}</textarea>
+            {{else if eq .Type "select"}}
+            <div class="drawer-readonly-value">{{if $isEdit}}{{cellValue $record .}}{{else}}Set after creation{{end}}</div>
+            {{else}}
+            <input id="drawer-{{.Name}}"
+                   type="{{inputType .}}"
+                   name="{{.Name}}"
+                   value="{{if $isEdit}}{{inputValue $record .}}{{end}}"
+                   {{if and .Required (not $isEdit)}}required{{end}}>
+            {{end}}
+
+            {{if .Help}}<small>{{.Help}}</small>{{end}}
+            {{if $errors}}{{if index $errors .Name}}
+            <small class="drawer-field-error">{{index $errors .Name}}</small>
+            {{end}}{{end}}
+        </div>
+        {{end}}
+
+        <footer class="record-form-actions">
+            {{if $isEdit}}
+            <button class="danger-button"
+                    type="button"
+                    hx-delete="/admin/t/{{$config.Name | lower}}/records/{{getID $record}}?{{$gridQuery}}"
+                    hx-target="#workspace-grid"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete this {{$config.Name | lower}}?">Delete</button>
+            {{end}}
+            <button class="secondary-button" type="button" onclick="closeRecordDrawer()">Cancel</button>
+            <button class="primary-toolbar-button" type="submit">{{if $isEdit}}Save{{else}}Create{{end}}</button>
+        </footer>
+    </form>
+</aside>

@@ -92,6 +92,9 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 		"getID":          getIDValue,
 		"formatDateTime": formatDateTimeField,
 	}
+	for name, fn := range workspaceTemplateFuncs() {
+		funcMap[name] = fn
+	}
 
 	templates := make(map[string]*template.Template)
 
@@ -100,10 +103,23 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 		return nil, fmt.Errorf("reading admin_base.html: %w", err)
 	}
 
-	var modelListContent []byte
-	modelListContent, err = ViewFiles.ReadFile("views/model_list.partial.html")
+	partialContents := map[string]string{}
+	err = fs.WalkDir(ViewFiles, "views", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".partial.html") {
+			return nil
+		}
+		content, err := ViewFiles.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		partialContents[strings.TrimPrefix(path, "views/")] = string(content)
+		return nil
+	})
 	if err != nil {
-		utils.Debugf("parseAdminTemplates: model_list.partial.html not found: %v", err)
+		return nil, fmt.Errorf("reading admin partials: %w", err)
 	}
 
 	// Walk the embedded template directory to find all .html files
@@ -130,12 +146,22 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 
 		var tmpl *template.Template
 		if isFragment {
-			// Parse fragment standalone
+			// Parse fragment standalone, with sibling partials available for nested templates.
 			content, err := ViewFiles.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("reading admin fragment %s: %w", relPath, err)
 			}
-			tmpl, err = template.New(relPath).Funcs(funcMap).Parse(string(content))
+			tmpl = template.New(relPath).Funcs(funcMap)
+			for partialName, partialContent := range partialContents {
+				if partialName == relPath {
+					continue
+				}
+				_, err = tmpl.New(partialName).Parse(partialContent)
+				if err != nil {
+					return fmt.Errorf("parsing %s: %w", partialName, err)
+				}
+			}
+			tmpl, err = tmpl.Parse(string(content))
 			if err != nil {
 				return fmt.Errorf("parsing admin fragment %s: %w", relPath, err)
 			}
@@ -151,15 +177,14 @@ func parseAdminTemplates() (map[string]*template.Template, error) {
 				return fmt.Errorf("parsing admin_base.html: %w", err)
 			}
 
-			// For model_index.html, also include the partial
-			if relPath == "model_index.html" && len(modelListContent) > 0 {
-				tmpl, err = tmpl.New("model_list.partial.html").Parse(string(modelListContent))
+			for partialName, partialContent := range partialContents {
+				_, err = tmpl.New(partialName).Parse(partialContent)
 				if err != nil {
-					return fmt.Errorf("parsing model_list.partial.html: %w", err)
+					return fmt.Errorf("parsing %s: %w", partialName, err)
 				}
 			}
 
-			tmpl, err = tmpl.New(relPath).Parse(string(content))
+			_, err = tmpl.New(relPath).Parse(string(content))
 			if err != nil {
 				return fmt.Errorf("parsing admin page %s: %w", relPath, err)
 			}
@@ -217,15 +242,17 @@ func (r *AdminRenderer) Render(w http.ResponseWriter, req *http.Request, name st
 	isFragment := strings.Contains(name, ".partial.html")
 
 	if isFragment {
-		// Partials can define a "content" block or just render directly
-		// Try content block first, fallback to direct execution
-		err := tmpl.ExecuteTemplate(w, "content", data)
-		if err != nil {
-			// If content block doesn't exist, execute directly
-			err = tmpl.Execute(w, data)
+		var err error
+		if tmpl.Lookup("content") != nil {
+			err = tmpl.ExecuteTemplate(w, "content", data)
+		} else {
+			err = tmpl.ExecuteTemplate(w, name, data)
 			if err != nil {
-				utils.Errorf("Partial template execution failed: %v", err)
+				err = tmpl.Execute(w, data)
 			}
+		}
+		if err != nil {
+			utils.Errorf("Partial template execution failed: %v", err)
 		}
 		return err
 	}

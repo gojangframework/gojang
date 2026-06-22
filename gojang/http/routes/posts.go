@@ -6,12 +6,10 @@ import (
 	"github.com/gojangframework/gojang/gojang/http/handlers"
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/justinas/nosurf"
 )
 
 func PostRoutes(handler *handlers.PostHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
 	r := chi.NewRouter()
-	r.Use(nosurf.NewPure)
 
 	// Public routes
 	r.Get("/", handler.Index) // Lists all posts (public)

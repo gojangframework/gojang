@@ -1,0 +1,44 @@
+{{define "title"}}{{.Data.Config.NamePlural}} - Admin Workspace{{end}}
+
+{{define "content"}}
+{{$grid := .Data.Grid}}
+{{$config := .Data.Config}}
+{{$resources := .Data.Resources}}
+
+<div class="workspace-shell">
+    <aside class="workspace-sidebar">
+        <div class="workspace-brand">
+            <div class="workspace-mark">A</div>
+            <div>
+                <strong>Admin</strong>
+                <span>Data workspace</span>
+            </div>
+        </div>
+        <nav class="workspace-resource-list">
+            {{range $resources}}
+            <a href="/admin/t/{{.Name | lower}}" class="workspace-resource {{if eq .Name $config.Name}}active{{end}}">
+                <span class="resource-icon">{{.Icon}}</span>
+                <span>{{.NamePlural}}</span>
+            </a>
+            {{end}}
+        </nav>
+    </aside>
+
+    <section class="workspace-main">
+        <header class="workspace-toolbar">
+            <div>
+                <h1>{{$config.Icon}} {{$config.NamePlural}}</h1>
+                <p>{{$grid.TotalCount}} records</p>
+            </div>
+        </header>
+
+        <div id="workspace-grid" class="workspace-grid-wrap">
+            {{if eq $grid.View "grid"}}
+                {{template "workspace_grid.partial.html" .}}
+            {{else}}
+                {{template "workspace_overview.partial.html" .}}
+            {{end}}
+        </div>
+    </section>
+</div>
+{{end}}

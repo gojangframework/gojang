@@ -1,0 +1,65 @@
+{{$grid := .Data.Grid}}
+{{$config := $grid.Config}}
+{{$fields := workspaceFields $config}}
+
+<div class="sheet-meta">
+    <div class="sheet-view-tabs">
+        <a class="sheet-view active"
+           href="/admin/t/{{$config.Name | lower}}?page={{$grid.Page}}&per_page={{$grid.PerPage}}"
+           aria-current="page">Overview</a>
+        <a class="sheet-view"
+           href="/admin/t/{{$config.Name | lower}}?view=grid&page={{$grid.Page}}&per_page={{$grid.PerPage}}">Grid view</a>
+    </div>
+</div>
+
+<div class="resource-overview">
+    <section class="overview-hero">
+        <div>
+            <div class="overview-kicker">Resource overview</div>
+            <h2>{{$config.Icon}} {{$config.NamePlural}}</h2>
+            <p>Review this resource, then open the editable spreadsheet workspace when you are ready to manage records.</p>
+        </div>
+        <a class="primary-toolbar-button"
+           href="/admin/t/{{$config.Name | lower}}?view=grid&page={{$grid.Page}}&per_page={{$grid.PerPage}}">Open grid</a>
+    </section>
+
+    <div class="overview-stats">
+        <div class="overview-stat">
+            <span>Records</span>
+            <strong>{{$grid.TotalCount}}</strong>
+        </div>
+        <div class="overview-stat">
+            <span>Visible fields</span>
+            <strong>{{len $fields}}</strong>
+        </div>
+    </div>
+
+    <section class="overview-section">
+        <div class="overview-section-heading">
+            <h3>Fields</h3>
+            <span>{{len $fields}} visible</span>
+        </div>
+        <div class="overview-field-table-wrap">
+            <table class="overview-field-table">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Grid</th>
+                        <th>Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $fields}}
+                    <tr>
+                        <td>{{.Label}}</td>
+                        <td>{{.Type}}</td>
+                        <td>{{if .Visible}}Visible{{else}}Hidden{{end}}</td>
+                        <td>{{if .Editable}}Editable{{else}}Locked{{end}}{{if .System}} system{{end}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

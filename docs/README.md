@@ -599,6 +599,7 @@ Environment variables in `.env`:
 
 ```bash
 # Server
+DEVHOST=0.0.0.0
 PORT=8080
 DEBUG=true
 

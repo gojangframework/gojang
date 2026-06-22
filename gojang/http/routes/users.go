@@ -6,12 +6,10 @@ import (
 	"github.com/gojangframework/gojang/gojang/http/handlers"
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/justinas/nosurf"
 )
 
 func UserRoutes(handler *handlers.UserHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
 	r := chi.NewRouter()
-	r.Use(nosurf.NewPure)
 	r.Use(middleware.RequireAuth(sm, client))
 	r.Use(middleware.RequireStaffOrAdmin)
 

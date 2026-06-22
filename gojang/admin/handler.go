@@ -3,8 +3,12 @@ package admin
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
+	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gojangframework/gojang/gojang/utils"
@@ -12,7 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/gojangframework/gojang/gojang/models/user"
 )
 
 // Handler handles all admin panel requests
@@ -21,6 +24,40 @@ type Handler struct {
 	Renderer *AdminRenderer
 	DB       *models.Client
 }
+
+type resourcePageData struct {
+	Config         *ModelConfig
+	Records        []interface{}
+	View           string
+	Page           int
+	PerPage        int
+	TotalPages     int
+	TotalCount     int
+	Resources      []*ModelConfig
+	Fields         []FieldConfig
+	AllFields      []FieldConfig
+	SelectedFields map[string]bool
+	Filter         GridFilter
+	Sort           GridSort
+}
+
+type GridFilter struct {
+	Field FieldConfig
+	Op    string
+	Value string
+	Valid bool
+}
+
+type GridSort struct {
+	Field FieldConfig
+	Dir   string
+	Valid bool
+}
+
+const (
+	workspaceViewOverview = "overview"
+	workspaceViewGrid     = "grid"
+)
 
 // NewHandler creates a new admin handler
 func NewHandler(registry *Registry, renderer *AdminRenderer, db *models.Client) *Handler {
@@ -31,636 +68,854 @@ func NewHandler(registry *Registry, renderer *AdminRenderer, db *models.Client) 
 	}
 }
 
-// Dashboard shows the admin dashboard with all registered models
+// Dashboard opens the admin workspace at the first available resource.
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	models := h.Registry.List()
 
+	if len(models) > 0 {
+		if r.Header.Get("HX-Request") == "true" {
+			h.renderWorkspace(w, r, models[0].Name)
+			return
+		}
+		h.renderWorkspace(w, r, models[0].Name)
+		return
+	}
+
 	h.Renderer.Render(w, r, "admin_main.html", &TemplateData{
-		Title: "Admin Dashboard",
+		Title: "Admin Workspace",
 		Data: map[string]interface{}{
 			"Models": models,
 		},
 	})
 }
 
-// Index lists all records for a model
-func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
+// Workspace renders the Airtable-style admin workspace for a resource.
+func (h *Handler) Workspace(w http.ResponseWriter, r *http.Request) {
+	h.renderWorkspace(w, r, chi.URLParam(r, "resource"))
+}
 
-	config, err := h.Registry.Get(modelName)
+// Grid renders only the data grid partial for a resource.
+func (h *Handler) Grid(w http.ResponseWriter, r *http.Request) {
+	data, err := h.resourcePageData(r, chi.URLParam(r, "resource"))
 	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		h.Renderer.RenderError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
-
-	// Parse pagination params
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
-	offset := (page - 1) * perPage
-
-	totalCount, err := config.CountAll(r.Context())
-	if err != nil {
-		utils.Errorw("admin.count_failed", "model", config.Name, "error", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to load %s", config.NamePlural))
-		return
-	}
-
-	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
-	if err != nil {
-		utils.Errorw("admin.query_failed", "model", config.Name, "error", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to load %s", config.NamePlural))
-		return
-	}
-
-	totalPages := (totalCount + perPage - 1) / perPage
-	if totalPages < 1 {
-		totalPages = 1
-	}
-
-	h.Renderer.Render(w, r, "model_index.html", &TemplateData{
-		Title: config.NamePlural,
-		Data: map[string]interface{}{
-			"Config":     config,
-			"Records":    records,
-			"Page":       page,
-			"PerPage":    perPage,
-			"TotalPages": totalPages,
-			"TotalCount": totalCount,
-		},
+	data.View = workspaceViewGrid
+	h.Renderer.Render(w, r, "workspace_grid.partial.html", &TemplateData{
+		Title: data.Config.NamePlural,
+		Data:  map[string]interface{}{"Grid": data},
 	})
 }
 
-// New shows the create form for a model
-func (h *Handler) New(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-
-	config, err := h.Registry.Get(modelName)
+// RecordDrawer renders the full record editor drawer.
+func (h *Handler) RecordDrawer(w http.ResponseWriter, r *http.Request) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
 		return
 	}
-
-	// Prevent direct access - modal forms must be loaded via HTMX
-	if r.Header.Get("HX-Request") != "true" {
-		http.Redirect(w, r, "/admin/"+modelName, http.StatusSeeOther)
-		return
-	}
-
-	// Get pagination params to pass to template for form submission
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
-
-	h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
-		Title: "New " + config.Name,
-		Data: map[string]interface{}{
-			"Config":  config,
-			"Action":  "create",
-			"Page":    page,
-			"PerPage": perPage,
-		},
-	})
-}
-
-// Create creates a new record
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-
-	config, err := h.Registry.Get(modelName)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid form data")
-		return
-	}
-
-	// Extract form data into map
-	data := make(map[string]interface{})
-	for _, field := range config.Fields {
-		if field.Readonly || field.Hidden {
-			continue
-		}
-
-		// Special handling for checkboxes: unchecked boxes don't appear in form data
-		if field.Type == FieldTypeBool {
-			_, exists := r.Form[field.Name]
-			data[field.Name] = exists
-		} else {
-			value := r.Form.Get(field.Name)
-			data[field.Name] = h.parseFieldValue(field, value)
-		}
-	}
-
-	// Validate required fields
-	errors := h.validateFields(config, data, true) // true = creating new record
-	if len(errors) > 0 {
-		w.Header().Set("HX-Retarget", "#form-modal")
-		w.Header().Set("HX-Reswap", "innerHTML")
-		h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
-			Title:  "New " + config.Name,
-			Errors: errors,
-			Data: map[string]interface{}{
-				"Config":   config,
-				"Action":   "create",
-				"FormData": data,
-			},
-		})
-		return
-	}
-
-	// Check for duplicate email when creating a User
-	if config.Name == "User" {
-		if email, ok := data["Email"].(string); ok && email != "" {
-			exists, err := h.DB.User.Query().Where(user.EmailEQ(email)).Exist(r.Context())
-			if err != nil {
-				utils.Errorw("admin.check_email_failed", "error", err)
-				h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to check email")
-				return
-			}
-			if exists {
-				w.Header().Set("HX-Retarget", "#form-modal")
-				w.Header().Set("HX-Reswap", "innerHTML")
-				h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
-					Title:  "New " + config.Name,
-					Errors: map[string]string{"Email": "This email address is already registered"},
-					Data: map[string]interface{}{
-						"Config":   config,
-						"Action":   "create",
-						"FormData": data,
-					},
-				})
-				return
-			}
-		}
-	}
-
-	// Create the record
-	_, err = config.CreateFunc(r.Context(), data)
-	if err != nil {
-		utils.Errorw("admin.create_failed", "model", config.Name, "error", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to create %s", config.Name))
-		return
-	}
-
-	// Parse pagination params for the list response
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
-	offset := (page - 1) * perPage
-
-	totalCount, err := config.CountAll(r.Context())
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
-		return
-	}
-
-	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
-		return
-	}
-
-	totalPages := (totalCount + perPage - 1) / perPage
-	if totalPages < 1 {
-		totalPages = 1
-	}
-
-	w.Header().Set("HX-Trigger", "closeFormModal")
-
-	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
-		Data: map[string]interface{}{
-			"Config":     config,
-			"Records":    records,
-			"Page":       page,
-			"PerPage":    perPage,
-			"TotalPages": totalPages,
-			"TotalCount": totalCount,
-		},
-	})
-}
-
-// Edit shows the edit form
-func (h *Handler) Edit(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-	idStr := chi.URLParam(r, "id")
-
-	config, err := h.Registry.Get(modelName)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
-		return
-	}
-
-	// Prevent direct access - modal forms must be loaded via HTMX
-	if r.Header.Get("HX-Request") != "true" {
-		http.Redirect(w, r, "/admin/"+modelName, http.StatusSeeOther)
-		return
-	}
-
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return
 	}
-
 	record, err := config.QueryByID(r.Context(), id)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusNotFound, config.Name+" not found")
 		return
 	}
-
-	// Get pagination params to pass to template for form submission
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
-
-	h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
+	h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
 		Title: "Edit " + config.Name,
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Record":  record,
-			"Page":    page,
-			"PerPage": perPage,
+			"Config":    config,
+			"Record":    record,
+			"Page":      currentGridPage(r),
+			"PerPage":   currentGridPerPage(r),
+			"GridQuery": currentGridQuery(r),
 		},
 	})
 }
 
-// Update updates a record
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-	idStr := chi.URLParam(r, "id")
-
-	config, err := h.Registry.Get(modelName)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+// UpdateCell updates one editable scalar field and returns the rendered cell.
+func (h *Handler) UpdateCell(w http.ResponseWriter, r *http.Request) {
+	config, field, id, ok := h.lookupMutationTarget(w, r)
+	if !ok {
 		return
 	}
-
-	id, err := uuid.Parse(idStr)
+	record, err := config.QueryByID(r.Context(), id)
 	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		h.Renderer.RenderError(w, r, http.StatusNotFound, config.Name+" not found")
 		return
 	}
-
+	if !canEditRecordField(config, record, field) {
+		h.Renderer.RenderError(w, r, http.StatusForbidden, "Field is protected")
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
-
-	// Extract form data
-	data := make(map[string]interface{})
-	for _, field := range config.Fields {
-		if field.Readonly || field.Hidden {
-			continue
-		}
-
-		// Special handling for checkboxes: unchecked boxes don't appear in form data
-		if field.Type == FieldTypeBool {
-			_, exists := r.Form[field.Name]
-			data[field.Name] = exists
-		} else {
-			value := r.Form.Get(field.Name)
-			data[field.Name] = h.parseFieldValue(field, value)
-		}
+	value, err := h.parseFieldValueStrict(field, submittedFieldValue(r, "value"))
+	if err != nil {
+		h.renderCellError(w, r, config, field, id, err.Error())
+		return
 	}
+	if err := config.UpdateFunc(r.Context(), id, map[string]interface{}{field.Name: value}); err != nil {
+		h.renderCellError(w, r, config, field, id, err.Error())
+		return
+	}
+	record, err = config.QueryByID(r.Context(), id)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to reload record")
+		return
+	}
+	h.Renderer.Render(w, r, "grid_cell.partial.html", &TemplateData{
+		Data: map[string]interface{}{
+			"Config": config,
+			"Field":  field,
+			"Record": record,
+		},
+	})
+}
 
-	// Validate required fields
-	errors := h.validateFields(config, data, false) // false = not creating, it's an update
+// SaveRecord updates a record from the drawer and refreshes the grid.
+func (h *Handler) SaveRecord(w http.ResponseWriter, r *http.Request) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		return
+	}
+	record, err := config.QueryByID(r.Context(), id)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, config.Name+" not found")
+		return
+	}
+	data, errors := h.editableFormData(r, config, false)
 	if len(errors) > 0 {
-		record, err := config.QueryByID(r.Context(), id)
-		if err != nil {
-			h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load record")
-			return
-		}
-		w.Header().Set("HX-Retarget", "#form-modal")
+		w.Header().Set("HX-Retarget", "#record-drawer")
 		w.Header().Set("HX-Reswap", "innerHTML")
-		h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
 			Title:  "Edit " + config.Name,
 			Errors: errors,
 			Data: map[string]interface{}{
-				"Config":   config,
-				"Action":   "edit",
-				"Record":   record,
-				"ID":       id,
-				"FormData": data,
+				"Config":    config,
+				"Record":    record,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
 			},
 		})
 		return
 	}
-
-	// Check for duplicate email when updating a User (excluding the current user)
-	if config.Name == "User" {
-		if email, ok := data["Email"].(string); ok && email != "" {
-			exists, err := h.DB.User.Query().
-				Where(user.EmailEQ(email)).
-				Where(user.IDNEQ(id)).
-				Exist(r.Context())
-			if err != nil {
-				utils.Errorw("admin.check_email_failed", "error", err)
-				h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to check email")
-				return
-			}
-			if exists {
-				record, err := config.QueryByID(r.Context(), id)
-				if err != nil {
-					h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load record")
-					return
-				}
-				w.Header().Set("HX-Retarget", "#form-modal")
-				w.Header().Set("HX-Reswap", "innerHTML")
-				h.Renderer.Render(w, r, "model_form.partial.html", &TemplateData{
-					Title:  "Edit " + config.Name,
-					Errors: map[string]string{"Email": "This email address is already registered"},
-					Data: map[string]interface{}{
-						"Config":   config,
-						"Action":   "edit",
-						"Record":   record,
-						"ID":       id,
-						"FormData": data,
-					},
-				})
-				return
-			}
-		}
-	}
-
-	// Update
-	err = config.UpdateFunc(r.Context(), id, data)
-	if err != nil {
-		utils.Errorw("admin.update_failed", "model", config.Name, "error", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to update %s", config.Name))
+	if err := h.rejectProtectedRecordMutations(config, record, data); err != nil {
+		w.Header().Set("HX-Retarget", "#record-drawer")
+		w.Header().Set("HX-Reswap", "innerHTML")
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+			Title:  "Edit " + config.Name,
+			Errors: map[string]string{"_general": err.Error()},
+			Data: map[string]interface{}{
+				"Config":    config,
+				"Record":    record,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
+			},
+		})
 		return
 	}
-
-	// Parse pagination params for the list response
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
-	offset := (page - 1) * perPage
-
-	totalCount, err := config.CountAll(r.Context())
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
+	if err := config.UpdateFunc(r.Context(), id, data); err != nil {
+		w.Header().Set("HX-Retarget", "#record-drawer")
+		w.Header().Set("HX-Reswap", "innerHTML")
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+			Title:  "Edit " + config.Name,
+			Errors: map[string]string{"_general": err.Error()},
+			Data: map[string]interface{}{
+				"Config":    config,
+				"Record":    record,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
+			},
+		})
 		return
 	}
-
-	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
-		return
-	}
-
-	totalPages := (totalCount + perPage - 1) / perPage
-	if totalPages < 1 {
-		totalPages = 1
-	}
-
-	w.Header().Set("HX-Trigger", "closeFormModal")
-
-	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
-		Data: map[string]interface{}{
-			"Config":     config,
-			"Records":    records,
-			"Page":       page,
-			"PerPage":    perPage,
-			"TotalPages": totalPages,
-			"TotalCount": totalCount,
-		},
-	})
+	w.Header().Set("HX-Trigger", "closeRecordDrawer")
+	h.Grid(w, r)
 }
 
-// DeleteConfirm shows delete confirmation
-func (h *Handler) DeleteConfirm(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-	idStr := chi.URLParam(r, "id")
-
-	config, err := h.Registry.Get(modelName)
+// CreateRecord creates a record from the drawer/new-row form and refreshes the grid.
+func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
 		return
 	}
-
-	// Prevent direct access - modal forms must be loaded via HTMX
-	if r.Header.Get("HX-Request") != "true" {
-		http.Redirect(w, r, "/admin/"+modelName, http.StatusSeeOther)
+	data, errors := h.editableFormData(r, config, true)
+	if len(errors) > 0 {
+		w.Header().Set("HX-Retarget", "#record-drawer")
+		w.Header().Set("HX-Reswap", "innerHTML")
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+			Title:  "New " + config.Name,
+			Errors: errors,
+			Data: map[string]interface{}{
+				"Config":    config,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
+			},
+		})
 		return
 	}
+	if err := h.rejectProtectedRecordMutations(config, nil, data); err != nil {
+		w.Header().Set("HX-Retarget", "#record-drawer")
+		w.Header().Set("HX-Reswap", "innerHTML")
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+			Title:  "New " + config.Name,
+			Errors: map[string]string{"_general": err.Error()},
+			Data: map[string]interface{}{
+				"Config":    config,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
+			},
+		})
+		return
+	}
+	if _, err := config.CreateFunc(r.Context(), data); err != nil {
+		w.Header().Set("HX-Retarget", "#record-drawer")
+		w.Header().Set("HX-Reswap", "innerHTML")
+		h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+			Title:  "New " + config.Name,
+			Errors: map[string]string{"_general": err.Error()},
+			Data: map[string]interface{}{
+				"Config":    config,
+				"Page":      currentGridPage(r),
+				"PerPage":   currentGridPerPage(r),
+				"GridQuery": currentGridQuery(r),
+			},
+		})
+		return
+	}
+	w.Header().Set("HX-Trigger", "closeRecordDrawer")
+	h.Grid(w, r)
+}
 
-	id, err := uuid.Parse(idStr)
+// NewRecordDrawer renders an empty drawer for record creation.
+func (h *Handler) NewRecordDrawer(w http.ResponseWriter, r *http.Request) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		return
+	}
+	h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
+		Title: "New " + config.Name,
+		Data: map[string]interface{}{
+			"Config":    config,
+			"Page":      currentGridPage(r),
+			"PerPage":   currentGridPerPage(r),
+			"GridQuery": currentGridQuery(r),
+		},
+	})
+}
+
+// DeleteRecord deletes a record and refreshes the grid.
+func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
 		return
 	}
-
 	record, err := config.QueryByID(r.Context(), id)
 	if err != nil {
 		h.Renderer.RenderError(w, r, http.StatusNotFound, config.Name+" not found")
 		return
 	}
-
-	// Get pagination params to pass to template for form submission
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
+	if isProtectedSettingRecord(config, record) {
+		h.Renderer.RenderError(w, r, http.StatusForbidden, "Protected settings cannot be deleted")
+		return
 	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
+	if err := config.DeleteFunc(r.Context(), id); err != nil {
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to delete %s", config.Name))
+		return
 	}
+	w.Header().Set("HX-Trigger", "closeRecordDrawer")
+	h.Grid(w, r)
+}
 
-	h.Renderer.Render(w, r, "model_delete.partial.html", &TemplateData{
-		Title: "Delete " + config.Name,
+// LegacyRedirect redirects old /admin/{model} URLs into the workspace route.
+func (h *Handler) LegacyRedirect(w http.ResponseWriter, r *http.Request) {
+	modelName := strings.Trim(chi.URLParam(r, "model"), "/")
+	if modelName == "" {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin/t/"+modelName, http.StatusSeeOther)
+}
+
+func (h *Handler) renderWorkspace(w http.ResponseWriter, r *http.Request, resourceName string) {
+	data, err := h.resourcePageData(r, resourceName)
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+	h.Renderer.Render(w, r, "workspace.html", &TemplateData{
+		Title: data.Config.NamePlural,
 		Data: map[string]interface{}{
-			"Config":  config,
-			"Record":  record,
-			"ID":      id,
-			"Page":    page,
-			"PerPage": perPage,
+			"Grid":      data,
+			"Resources": data.Resources,
+			"Config":    data.Config,
 		},
 	})
 }
 
-// Delete deletes a record
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	modelName := chi.URLParam(r, "model")
-	idStr := chi.URLParam(r, "id")
-
-	config, err := h.Registry.Get(modelName)
+func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resourcePageData, error) {
+	config, err := h.Registry.Get(resourceName)
 	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
-		return
+		return nil, err
 	}
-
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
-		return
-	}
-
-	err = config.DeleteFunc(r.Context(), id)
-	if err != nil {
-		utils.Errorw("admin.delete_failed", "model", config.Name, "error", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, fmt.Sprintf("Failed to delete %s", config.Name))
-		return
-	}
-
-	// Parse pagination params for the list response
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			page = p
-		}
-	}
-	perPage := 20
-	if v := r.URL.Query().Get("per_page"); v != "" {
-		if pp, err := strconv.Atoi(v); err == nil && (pp == 20 || pp == 50 || pp == 100) {
-			perPage = pp
-		}
-	}
+	page := parsePositiveInt(r.URL.Query().Get("page"), 1)
+	perPage := parseAllowedPerPage(r.URL.Query().Get("per_page"), 50)
 	offset := (page - 1) * perPage
+	allFields := allWorkspaceFields(config)
+	defaultFields := workspaceFields(config)
+	selectedFields := parseSelectedGridFields(r.URL.Query()["fields"], allFields, defaultFields)
+	filter := parseGridFilter(r, allFields)
+	sortState := parseGridSort(r, allFields)
 
-	totalCount, err := config.CountAll(r.Context())
+	records, totalCount, err := h.queryWorkspaceRecords(r, config, filter, sortState, perPage, offset)
 	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
-		return
+		return nil, err
 	}
-
-	records, err := config.QueryAllPaginated(r.Context(), perPage, offset)
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load records")
-		return
-	}
-
 	totalPages := (totalCount + perPage - 1) / perPage
 	if totalPages < 1 {
 		totalPages = 1
 	}
+	return &resourcePageData{
+		Config:         config,
+		Records:        records,
+		View:           parseWorkspaceView(r.URL.Query().Get("view")),
+		Page:           page,
+		PerPage:        perPage,
+		TotalPages:     totalPages,
+		TotalCount:     totalCount,
+		Resources:      h.Registry.List(),
+		Fields:         fieldsBySelection(allFields, selectedFields),
+		AllFields:      allFields,
+		SelectedFields: selectedFields,
+		Filter:         filter,
+		Sort:           sortState,
+	}, nil
+}
 
-	// Trigger modal close via HTMX event
-	w.Header().Set("HX-Trigger", "closeDeleteModal")
+func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, filter GridFilter, sortState GridSort, limit, offset int) ([]interface{}, int, error) {
+	if !filter.Valid && !sortState.Valid {
+		totalCount, err := config.CountAll(r.Context())
+		if err != nil {
+			return nil, 0, err
+		}
+		records, err := config.QueryAllPaginated(r.Context(), limit, offset)
+		return records, totalCount, err
+	}
+	if config.QueryAll == nil {
+		return nil, 0, fmt.Errorf("resource %s does not support filtered grid queries", config.Name)
+	}
+	records, err := config.QueryAll(r.Context())
+	if err != nil {
+		return nil, 0, err
+	}
+	if filter.Valid {
+		records = filterRecords(records, filter)
+	}
+	if sortState.Valid {
+		sortRecords(records, sortState)
+	}
+	totalCount := len(records)
+	end := offset + limit
+	if offset > totalCount {
+		return []interface{}{}, totalCount, nil
+	}
+	if end > totalCount {
+		end = totalCount
+	}
+	return records[offset:end], totalCount, nil
+}
 
-	h.Renderer.Render(w, r, "model_list.partial.html", &TemplateData{
+func parseWorkspaceView(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case workspaceViewGrid:
+		return workspaceViewGrid
+	default:
+		return workspaceViewOverview
+	}
+}
+
+func allWorkspaceFields(config *ModelConfig) []FieldConfig {
+	if config == nil {
+		return nil
+	}
+	fields := make([]FieldConfig, 0, len(config.Fields))
+	for _, field := range config.Fields {
+		if field.Visible && !field.Hidden && !field.Sensitive {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func parseSelectedGridFields(raw []string, allFields, defaultFields []FieldConfig) map[string]bool {
+	allowed := make(map[string]bool, len(allFields))
+	for _, field := range allFields {
+		allowed[field.Name] = true
+	}
+	names := flattenGridParamValues(raw)
+	selected := make(map[string]bool, len(names))
+	for _, name := range names {
+		if allowed[name] {
+			selected[name] = true
+		}
+	}
+	if len(selected) == 0 {
+		for _, field := range defaultFields {
+			if allowed[field.Name] {
+				selected[field.Name] = true
+			}
+		}
+	}
+	if len(selected) == 0 {
+		for _, field := range allFields {
+			selected[field.Name] = true
+		}
+	}
+	return selected
+}
+
+func flattenGridParamValues(values []string) []string {
+	var result []string
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				result = append(result, part)
+			}
+		}
+	}
+	return result
+}
+
+func fieldsBySelection(allFields []FieldConfig, selected map[string]bool) []FieldConfig {
+	fields := make([]FieldConfig, 0, len(allFields))
+	for _, field := range allFields {
+		if selected[field.Name] {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func parseGridFilter(r *http.Request, fields []FieldConfig) GridFilter {
+	value := strings.TrimSpace(r.URL.Query().Get("filter_value"))
+	if value == "" {
+		return GridFilter{}
+	}
+	field, ok := findGridField(fields, r.URL.Query().Get("filter_field"), func(field FieldConfig) bool {
+		return field.Filterable
+	})
+	if !ok {
+		return GridFilter{}
+	}
+	op := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("filter_op")))
+	if op != "equals" {
+		op = "contains"
+	}
+	return GridFilter{Field: field, Op: op, Value: value, Valid: true}
+}
+
+func parseGridSort(r *http.Request, fields []FieldConfig) GridSort {
+	field, ok := findGridField(fields, r.URL.Query().Get("sort_field"), func(field FieldConfig) bool {
+		return field.Sortable
+	})
+	if !ok {
+		return GridSort{}
+	}
+	dir := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("sort_dir")))
+	if dir != "desc" {
+		dir = "asc"
+	}
+	return GridSort{Field: field, Dir: dir, Valid: true}
+}
+
+func findGridField(fields []FieldConfig, name string, accept func(FieldConfig) bool) (FieldConfig, bool) {
+	for _, field := range fields {
+		if field.Name == name && accept(field) {
+			return field, true
+		}
+	}
+	return FieldConfig{}, false
+}
+
+func filterRecords(records []interface{}, filter GridFilter) []interface{} {
+	filtered := make([]interface{}, 0, len(records))
+	needle := strings.ToLower(filter.Value)
+	for _, record := range records {
+		value := strings.ToLower(strings.TrimSpace(cellValue(record, filter.Field)))
+		switch filter.Op {
+		case "equals":
+			if value == needle {
+				filtered = append(filtered, record)
+			}
+		default:
+			if strings.Contains(value, needle) {
+				filtered = append(filtered, record)
+			}
+		}
+	}
+	return filtered
+}
+
+func sortRecords(records []interface{}, sortState GridSort) {
+	sort.SliceStable(records, func(i, j int) bool {
+		cmp := compareRecordField(records[i], records[j], sortState.Field)
+		if sortState.Dir == "desc" {
+			return cmp > 0
+		}
+		return cmp < 0
+	})
+}
+
+func compareRecordField(left, right interface{}, field FieldConfig) int {
+	leftValue := rawFieldValue(left, field.Name)
+	rightValue := rawFieldValue(right, field.Name)
+	switch field.Type {
+	case FieldTypeInt:
+		return compareFloat(fieldFloatValue(leftValue), fieldFloatValue(rightValue))
+	case FieldTypeFloat:
+		return compareFloat(fieldFloatValue(leftValue), fieldFloatValue(rightValue))
+	case FieldTypeBool:
+		return compareString(strconv.FormatBool(fieldBoolValue(leftValue)), strconv.FormatBool(fieldBoolValue(rightValue)))
+	case FieldTypeTime:
+		return compareTime(fieldTimeValue(leftValue), fieldTimeValue(rightValue))
+	default:
+		return compareString(fmt.Sprint(leftValue), fmt.Sprint(rightValue))
+	}
+}
+
+func fieldFloatValue(value interface{}) float64 {
+	switch v := value.(type) {
+	case int:
+		return float64(v)
+	case int8:
+		return float64(v)
+	case int16:
+		return float64(v)
+	case int32:
+		return float64(v)
+	case int64:
+		return float64(v)
+	case uint:
+		return float64(v)
+	case uint8:
+		return float64(v)
+	case uint16:
+		return float64(v)
+	case uint32:
+		return float64(v)
+	case uint64:
+		return float64(v)
+	case float32:
+		return float64(v)
+	case float64:
+		return v
+	default:
+		parsed, _ := strconv.ParseFloat(fmt.Sprint(value), 64)
+		return parsed
+	}
+}
+
+func fieldBoolValue(value interface{}) bool {
+	if b, ok := value.(bool); ok {
+		return b
+	}
+	parsed, _ := strconv.ParseBool(fmt.Sprint(value))
+	return parsed
+}
+
+func fieldTimeValue(value interface{}) time.Time {
+	switch v := value.(type) {
+	case time.Time:
+		return v
+	case *time.Time:
+		if v != nil {
+			return *v
+		}
+	}
+	parsed, _ := time.Parse(time.RFC3339, fmt.Sprint(value))
+	return parsed
+}
+
+func compareFloat(left, right float64) int {
+	switch {
+	case left < right:
+		return -1
+	case left > right:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareTime(left, right time.Time) int {
+	switch {
+	case left.Before(right):
+		return -1
+	case left.After(right):
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareString(left, right string) int {
+	left = strings.ToLower(left)
+	right = strings.ToLower(right)
+	switch {
+	case left < right:
+		return -1
+	case left > right:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func parsePositiveInt(raw string, fallback int) int {
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 1 {
+		return fallback
+	}
+	return value
+}
+
+func parseAllowedPerPage(raw string, fallback int) int {
+	value := parsePositiveInt(raw, fallback)
+	switch value {
+	case 20, 50, 100:
+		return value
+	default:
+		return fallback
+	}
+}
+
+func currentGridPage(r *http.Request) int {
+	return parsePositiveInt(r.URL.Query().Get("page"), 1)
+}
+
+func currentGridPerPage(r *http.Request) int {
+	return parseAllowedPerPage(r.URL.Query().Get("per_page"), 50)
+}
+
+func currentGridQuery(r *http.Request) template.URL {
+	source := r.URL.Query()
+	values := url.Values{}
+	values.Set("view", workspaceViewGrid)
+	values.Set("page", strconv.Itoa(currentGridPage(r)))
+	values.Set("per_page", strconv.Itoa(currentGridPerPage(r)))
+	for _, field := range flattenGridParamValues(source["fields"]) {
+		values.Add("fields", field)
+	}
+	if field := strings.TrimSpace(source.Get("filter_field")); field != "" {
+		values.Set("filter_field", field)
+	}
+	if op := strings.TrimSpace(source.Get("filter_op")); op != "" {
+		values.Set("filter_op", op)
+	}
+	if value := strings.TrimSpace(source.Get("filter_value")); value != "" {
+		values.Set("filter_value", value)
+	}
+	if field := strings.TrimSpace(source.Get("sort_field")); field != "" {
+		values.Set("sort_field", field)
+	}
+	if dir := strings.TrimSpace(source.Get("sort_dir")); dir != "" {
+		values.Set("sort_dir", dir)
+	}
+	return template.URL(values.Encode())
+}
+
+func submittedFieldValue(r *http.Request, name string) string {
+	values := r.Form[name]
+	for i := len(values) - 1; i >= 0; i-- {
+		if values[i] == "true" || values[i] == "on" || values[i] == "1" {
+			return values[i]
+		}
+	}
+	if len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
+func (h *Handler) lookupMutationTarget(w http.ResponseWriter, r *http.Request) (*ModelConfig, FieldConfig, uuid.UUID, bool) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		return nil, FieldConfig{}, uuid.UUID{}, false
+	}
+	fieldName := chi.URLParam(r, "field")
+	field, ok := findField(config, fieldName)
+	if !ok {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Field not found")
+		return nil, FieldConfig{}, uuid.UUID{}, false
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid ID")
+		return nil, FieldConfig{}, uuid.UUID{}, false
+	}
+	return config, field, id, true
+}
+
+func findField(config *ModelConfig, name string) (FieldConfig, bool) {
+	for _, field := range config.Fields {
+		if field.Name == name {
+			return field, true
+		}
+	}
+	return FieldConfig{}, false
+}
+
+func canInlineEdit(field FieldConfig) bool {
+	if !field.Editable || field.Readonly || field.Hidden || field.Virtual || field.Sensitive {
+		return false
+	}
+	switch field.Type {
+	case FieldTypePassword, FieldTypeSelect:
+		return false
+	default:
+		return true
+	}
+}
+
+func (h *Handler) parseFieldValueStrict(field FieldConfig, value string) (interface{}, error) {
+	switch field.Type {
+	case FieldTypeBool:
+		return value == "on" || value == "true" || value == "1", nil
+	case FieldTypeInt:
+		if value == "" {
+			return 0, nil
+		}
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be a whole number", field.Label)
+		}
+		return i, nil
+	case FieldTypeFloat:
+		if value == "" {
+			return 0.0, nil
+		}
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be a number", field.Label)
+		}
+		return f, nil
+	case FieldTypeTime:
+		if value == "" {
+			return clearFieldValue{}, nil
+		}
+		for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05", time.RFC3339} {
+			if t, err := time.Parse(layout, value); err == nil {
+				return t, nil
+			}
+		}
+		return nil, fmt.Errorf("%s must be a valid date/time", field.Label)
+	default:
+		return value, nil
+	}
+}
+
+func (h *Handler) editableFormData(r *http.Request, config *ModelConfig, isCreate bool) (map[string]interface{}, map[string]string) {
+	if err := r.ParseForm(); err != nil {
+		return nil, map[string]string{"_general": "Invalid form data"}
+	}
+	data := make(map[string]interface{})
+	errors := make(map[string]string)
+	for _, field := range config.Fields {
+		if field.Readonly || field.Hidden || !field.Editable {
+			continue
+		}
+		if !isCreate && field.Type == FieldTypePassword && r.Form.Get(field.Name) == "" {
+			continue
+		}
+		if field.Type == FieldTypeBool {
+			_, exists := r.Form[field.Name]
+			_, present := r.Form[field.Name+"__present"]
+			if isCreate && !exists && !present {
+				continue
+			}
+			data[field.Name] = exists
+			continue
+		}
+		value, err := h.parseFieldValueStrict(field, r.Form.Get(field.Name))
+		if err != nil {
+			errors[field.Name] = err.Error()
+			continue
+		}
+		if _, clear := value.(clearFieldValue); clear && isCreate {
+			continue
+		}
+		data[field.Name] = value
+		if isCreate && field.Required && (value == nil || value == "") {
+			errors[field.Name] = field.Label + " is required"
+		}
+	}
+	return data, errors
+}
+
+func (h *Handler) renderCellError(w http.ResponseWriter, r *http.Request, config *ModelConfig, field FieldConfig, id uuid.UUID, message string) {
+	record, _ := config.QueryByID(r.Context(), id)
+	h.Renderer.Render(w, r, "grid_cell.partial.html", &TemplateData{
+		Errors: map[string]string{field.Name: message},
 		Data: map[string]interface{}{
-			"Config":     config,
-			"Records":    records,
-			"Page":       page,
-			"PerPage":    perPage,
-			"TotalPages": totalPages,
-			"TotalCount": totalCount,
+			"Config": config,
+			"Errors": map[string]string{field.Name: message},
+			"Field":  field,
+			"Record": record,
 		},
 	})
 }
 
-// parseFieldValue parses a form value based on field type
-func (h *Handler) parseFieldValue(field FieldConfig, value string) interface{} {
-	switch field.Type {
-	case FieldTypeBool:
-		return value == "on" || value == "true" || value == "1"
-	case FieldTypeInt:
-		if value == "" {
-			return 0
-		}
-		i, _ := strconv.Atoi(value)
-		return i
-	case FieldTypeFloat:
-		if value == "" {
-			return 0.0
-		}
-		f, _ := strconv.ParseFloat(value, 64)
-		return f
-	case FieldTypeTime:
-		// Expect value from <input type="datetime-local"> with layout 2006-01-02T15:04
-		if value == "" {
-			return nil
-		}
-		// Try parsing in local time first
-		if t, err := time.Parse("2006-01-02T15:04", value); err == nil {
-			return t
-		}
-		// Fallbacks for potential seconds precision
-		if t, err := time.Parse("2006-01-02T15:04:05", value); err == nil {
-			return t
-		}
-		// If parsing fails, return the raw string; validator may catch it later
-		return value
-	default:
-		return value
+func (h *Handler) rejectProtectedRecordMutations(config *ModelConfig, record interface{}, data map[string]interface{}) error {
+	if config == nil || config.Name != "Setting" {
+		return nil
 	}
+	for fieldName := range data {
+		if isProtectedRecordField(config, record, fieldName) {
+			return fmt.Errorf("field %s is protected", fieldName)
+		}
+	}
+	if record == nil {
+		key, _ := data["Key"].(string)
+		if strings.HasPrefix(key, "admin.") {
+			return fmt.Errorf("admin setting keys are protected")
+		}
+	}
+	return nil
 }
 
-// validateFields validates form data
-func (h *Handler) validateFields(config *ModelConfig, data map[string]interface{}, isCreate bool) map[string]string {
-	errors := make(map[string]string)
-
-	for _, field := range config.Fields {
-		if !field.Required || field.Readonly || field.Hidden {
-			continue
-		}
-
-		// For password fields on update, skip validation if empty (optional on edit)
-		if !isCreate && field.Type == FieldTypePassword {
-			continue
-		}
-
-		value, ok := data[field.Name]
-		if !ok || value == "" || value == nil {
-			errors[field.Name] = field.Label + " is required"
-		}
-	}
-
-	return errors
+func isProtectedSettingRecord(config *ModelConfig, record interface{}) bool {
+	return config != nil && config.Name == "Setting" && isAdminSettingRecord(record)
 }
 
 // SaveModelOrderSetting saves the model order preference

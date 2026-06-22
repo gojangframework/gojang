@@ -2,7 +2,9 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/gojangframework/gojang/gojang/models/setting"
@@ -10,84 +12,106 @@ import (
 
 // LoadModelOrder loads the saved model order from database and applies it
 func (r *Registry) LoadModelOrder() {
+	if r.client == nil || r.client.Setting == nil || !r.hasEntDriver() {
+		return
+	}
 	ctx := context.Background()
 
-	// Try to load saved order from settings
 	settingRecord, err := r.client.Setting.Query().
-		Where(setting.KeyEQ("admin_model_order")).
+		Where(setting.KeyEQ("admin.workspace.sidebar_order")).
 		Only(ctx)
+	if err != nil || settingRecord == nil {
+		settingRecord, err = r.client.Setting.Query().
+			Where(setting.KeyEQ("admin_model_order")).
+			Only(ctx)
+	}
 
 	if err != nil || settingRecord == nil {
 		// No saved order, keep registration order
 		return
 	}
 
-	// Parse JSON array from value
 	var savedOrder []string
-	value := strings.Trim(settingRecord.Value, "[]\"")
-	if value == "" {
+	if err := json.Unmarshal([]byte(settingRecord.Value), &savedOrder); err != nil || len(savedOrder) == 0 {
 		return
 	}
 
-	// Simple JSON array parsing
-	savedOrder = strings.Split(value, "\",\"")
-	for i := range savedOrder {
-		savedOrder[i] = strings.Trim(savedOrder[i], "\"")
-	}
+	r.modelKeys = r.normalizedModelOrder(savedOrder)
+}
 
-	// Build new order based on saved preferences
+func (r *Registry) normalizedModelOrder(order []string) []string {
 	newKeys := make([]string, 0, len(r.modelKeys))
 	usedKeys := make(map[string]bool)
 
-	// First, add models in saved order
-	for _, name := range savedOrder {
-		key := strings.ToLower(name)
+	for _, name := range order {
+		key := strings.ToLower(strings.TrimSpace(name))
+		if key == "" || usedKeys[key] {
+			continue
+		}
 		if _, exists := r.models[key]; exists {
 			newKeys = append(newKeys, key)
 			usedKeys[key] = true
 		}
 	}
 
-	// Then add any new models not in saved order
 	for _, key := range r.modelKeys {
-		if !usedKeys[key] {
+		if _, exists := r.models[key]; exists && !usedKeys[key] {
 			newKeys = append(newKeys, key)
+			usedKeys[key] = true
 		}
 	}
 
-	r.modelKeys = newKeys
+	return newKeys
+}
+
+func (r *Registry) hasEntDriver() bool {
+	clientValue := reflect.ValueOf(r.client)
+	if !clientValue.IsValid() || clientValue.Kind() != reflect.Ptr || clientValue.IsNil() {
+		return false
+	}
+	configField := clientValue.Elem().FieldByName("config")
+	if !configField.IsValid() {
+		return false
+	}
+	driverField := configField.FieldByName("driver")
+	return driverField.IsValid() && driverField.Kind() == reflect.Interface && !driverField.IsNil()
 }
 
 // SaveModelOrder saves the current model order to database
 func (r *Registry) SaveModelOrder(order []string) error {
+	if r.client == nil || r.client.Setting == nil || !r.hasEntDriver() {
+		return fmt.Errorf("settings client is not available")
+	}
 	ctx := context.Background()
 
-	// Convert order to JSON array string
-	var orderNames []string
-	for _, key := range order {
-		if config, ok := r.models[strings.ToLower(key)]; ok {
+	newKeys := r.normalizedModelOrder(order)
+	orderNames := make([]string, 0, len(newKeys))
+	for _, key := range newKeys {
+		if config, ok := r.models[key]; ok {
 			orderNames = append(orderNames, config.Name)
 		}
 	}
 
-	// Build JSON manually
-	jsonValue := "[\"" + strings.Join(orderNames, "\",\"") + "\"]"
+	jsonBytes, err := json.Marshal(orderNames)
+	if err != nil {
+		return fmt.Errorf("failed to encode model order: %w", err)
+	}
 
 	// Check if setting exists
 	existing, err := r.client.Setting.Query().
-		Where(setting.KeyEQ("admin_model_order")).
+		Where(setting.KeyEQ("admin.workspace.sidebar_order")).
 		Only(ctx)
 
 	if err != nil {
 		// Create new setting
 		_, err = r.client.Setting.Create().
-			SetKey("admin_model_order").
-			SetValue(jsonValue).
+			SetKey("admin.workspace.sidebar_order").
+			SetValue(string(jsonBytes)).
 			Save(ctx)
 	} else {
 		// Update existing setting
 		err = r.client.Setting.UpdateOne(existing).
-			SetValue(jsonValue).
+			SetValue(string(jsonBytes)).
 			Exec(ctx)
 	}
 
@@ -95,11 +119,7 @@ func (r *Registry) SaveModelOrder(order []string) error {
 		return fmt.Errorf("failed to save model order: %w", err)
 	}
 
-	// Update in-memory order
-	r.modelKeys = make([]string, len(order))
-	for i, name := range order {
-		r.modelKeys[i] = strings.ToLower(name)
-	}
+	r.modelKeys = newKeys
 
 	return nil
 }

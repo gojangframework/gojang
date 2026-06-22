@@ -1,0 +1,235 @@
+{{$grid := .Data.Grid}}
+{{$config := $grid.Config}}
+{{$fields := $grid.Fields}}
+
+<div class="sheet-meta">
+    <div class="sheet-view-tabs">
+        <a class="sheet-view"
+           href="/admin/t/{{$config.Name | lower}}?page={{$grid.Page}}&per_page={{$grid.PerPage}}">Overview</a>
+        <a class="sheet-view active"
+           href="/admin/t/{{$config.Name | lower}}?{{gridQuery $grid $grid.Page}}"
+           aria-current="page">Grid view</a>
+    </div>
+    <div class="sheet-meta-actions">
+        <div class="grid-action-row">
+            <details id="fields-control" class="grid-control-details" name="grid-control">
+                <summary class="toolbar-button">Fields</summary>
+                <form class="grid-control-panel"
+                      method="get"
+                      action="/admin/t/{{$config.Name | lower}}"
+                      hx-get="/admin/t/{{$config.Name | lower}}/grid"
+                      hx-target="#workspace-grid"
+                      hx-swap="innerHTML">
+                    <input type="hidden" name="view" value="grid">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{if $grid.Filter.Valid}}
+                    <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
+                    <input type="hidden" name="filter_op" value="{{$grid.Filter.Op}}">
+                    <input type="hidden" name="filter_value" value="{{$grid.Filter.Value}}">
+                    {{end}}
+                    {{if $grid.Sort.Valid}}
+                    <input type="hidden" name="sort_field" value="{{$grid.Sort.Field.Name}}">
+                    <input type="hidden" name="sort_dir" value="{{$grid.Sort.Dir}}">
+                    {{end}}
+                    <div class="grid-control-heading">Visible fields</div>
+                    <div class="field-toggle-list">
+                        {{range $grid.AllFields}}
+                        <label>
+                            <input type="checkbox" name="fields" value="{{.Name}}" {{if fieldSelected $grid .Name}}checked{{end}} onchange="this.form.requestSubmit()">
+                            <span>{{.Label}}</span>
+                        </label>
+                        {{end}}
+                    </div>
+                </form>
+            </details>
+
+            <details id="filter-control" class="grid-control-details" name="grid-control">
+                <summary class="toolbar-button {{if $grid.Filter.Valid}}has-active-filter{{end}}">
+                    <span>Filter</span>
+                    {{if $grid.Filter.Valid}}<span class="control-indicator" aria-label="Filter active" title="Filter active"></span>{{end}}
+                </summary>
+                <form class="grid-control-panel"
+                      method="get"
+                      action="/admin/t/{{$config.Name | lower}}"
+                      hx-get="/admin/t/{{$config.Name | lower}}/grid"
+                      hx-target="#workspace-grid"
+                      hx-swap="innerHTML">
+                    <input type="hidden" name="view" value="grid">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
+                    {{if $grid.Sort.Valid}}
+                    <input type="hidden" name="sort_field" value="{{$grid.Sort.Field.Name}}">
+                    <input type="hidden" name="sort_dir" value="{{$grid.Sort.Dir}}">
+                    {{end}}
+                    <div class="grid-control-heading">Filter rows</div>
+                    <div class="grid-control-row">
+                        <select name="filter_field" aria-label="Filter field">
+                            {{range $grid.AllFields}}
+                                {{if .Filterable}}
+                                <option value="{{.Name}}" {{if and $grid.Filter.Valid (eq $grid.Filter.Field.Name .Name)}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
+                            {{end}}
+                        </select>
+                        <select name="filter_op" aria-label="Filter operation">
+                            <option value="contains" {{if or (not $grid.Filter.Valid) (eq $grid.Filter.Op "contains")}}selected{{end}}>contains</option>
+                            <option value="equals" {{if and $grid.Filter.Valid (eq $grid.Filter.Op "equals")}}selected{{end}}>equals</option>
+                        </select>
+                        <input type="search" name="filter_value" value="{{if $grid.Filter.Valid}}{{$grid.Filter.Value}}{{end}}" placeholder="Value">
+                        <button class="toolbar-button" type="submit">Apply</button>
+                        {{if $grid.Filter.Valid}}
+                        <a class="secondary-button"
+                           href="/admin/t/{{$config.Name | lower}}?{{gridQueryWithoutFilter $grid 1}}"
+                           hx-get="/admin/t/{{$config.Name | lower}}/grid?{{gridQueryWithoutFilter $grid 1}}"
+                           hx-target="#workspace-grid"
+                           hx-swap="innerHTML">Reset</a>
+                        {{end}}
+                    </div>
+                </form>
+            </details>
+
+            <details id="sort-control" class="grid-control-details" name="grid-control">
+                <summary class="toolbar-button">Sort</summary>
+                <form class="grid-control-panel"
+                      method="get"
+                      action="/admin/t/{{$config.Name | lower}}"
+                      hx-get="/admin/t/{{$config.Name | lower}}/grid"
+                      hx-target="#workspace-grid"
+                      hx-swap="innerHTML">
+                    <input type="hidden" name="view" value="grid">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
+                    {{if $grid.Filter.Valid}}
+                    <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
+                    <input type="hidden" name="filter_op" value="{{$grid.Filter.Op}}">
+                    <input type="hidden" name="filter_value" value="{{$grid.Filter.Value}}">
+                    {{end}}
+                    <div class="grid-control-heading">Sort rows</div>
+                    <div class="grid-control-row">
+                        <select name="sort_field" aria-label="Sort field">
+                            <option value="">No sort</option>
+                            {{range $grid.AllFields}}
+                                {{if .Sortable}}
+                                <option value="{{.Name}}" {{if and $grid.Sort.Valid (eq $grid.Sort.Field.Name .Name)}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
+                            {{end}}
+                        </select>
+                        <select name="sort_dir" aria-label="Sort direction">
+                            <option value="asc" {{if or (not $grid.Sort.Valid) (eq $grid.Sort.Dir "asc")}}selected{{end}}>ascending</option>
+                            <option value="desc" {{if and $grid.Sort.Valid (eq $grid.Sort.Dir "desc")}}selected{{end}}>descending</option>
+                        </select>
+                        <button class="toolbar-button" type="submit">Apply</button>
+                    </div>
+                </form>
+            </details>
+
+            <button class="primary-toolbar-button"
+                hx-get="/admin/t/{{$config.Name | lower}}/records/new?{{gridQuery $grid $grid.Page}}"
+                hx-target="#record-drawer"
+                hx-swap="innerHTML">+ Add record</button>
+        </div>
+
+        <form class="sheet-page-size"
+              method="get"
+              action="/admin/t/{{$config.Name | lower}}"
+              hx-get="/admin/t/{{$config.Name | lower}}/grid"
+              hx-target="#workspace-grid"
+              hx-swap="innerHTML">
+            <input type="hidden" name="view" value="grid">
+            <input type="hidden" name="page" value="1">
+            {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
+            {{if $grid.Filter.Valid}}
+            <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
+            <input type="hidden" name="filter_op" value="{{$grid.Filter.Op}}">
+            <input type="hidden" name="filter_value" value="{{$grid.Filter.Value}}">
+            {{end}}
+            {{if $grid.Sort.Valid}}
+            <input type="hidden" name="sort_field" value="{{$grid.Sort.Field.Name}}">
+            <input type="hidden" name="sort_dir" value="{{$grid.Sort.Dir}}">
+            {{end}}
+            <label for="per-page-{{$config.Name | lower}}">Rows per page</label>
+            <select id="per-page-{{$config.Name | lower}}" name="per_page" onchange="this.form.requestSubmit()">
+                <option value="20" {{if eq $grid.PerPage 20}}selected{{end}}>20</option>
+                <option value="50" {{if eq $grid.PerPage 50}}selected{{end}}>50</option>
+                <option value="100" {{if eq $grid.PerPage 100}}selected{{end}}>100</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="sheet-scroller">
+    <table class="sheet-table">
+        <thead>
+            <tr>
+                <th class="row-number-col"></th>
+                {{range $fields}}
+                <th style="min-width: {{.Width}}px;">
+                    <span class="field-pill">{{.Label}}{{if .System}} <small>locked</small>{{end}}</span>
+                </th>
+                {{end}}
+                <th class="sheet-action-col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{if $grid.Records}}
+                {{range $index, $record := $grid.Records}}
+                <tr>
+                    <td class="row-number-col">{{add (mul (sub $grid.Page 1) $grid.PerPage) (add $index 1)}}</td>
+                    {{range $fields}}
+                        {{template "grid_cell.partial.html" (dict "Config" $config "Field" . "Record" $record "Errors" $.Errors "Page" $grid.Page "PerPage" $grid.PerPage "GridQuery" (gridQuery $grid $grid.Page))}}
+                    {{end}}
+                    <td class="sheet-action-col">
+                        <button class="icon-cell-button"
+                            hx-get="/admin/t/{{$config.Name | lower}}/records/{{getID $record}}?{{gridQuery $grid $grid.Page}}"
+                            hx-target="#record-drawer"
+                            hx-swap="innerHTML">Open</button>
+                    </td>
+                </tr>
+                {{end}}
+            {{else}}
+                <tr>
+                    <td colspan="{{add (len $fields) 2}}" class="sheet-empty">
+                        No {{$config.NamePlural | lower}} yet.
+                    </td>
+                </tr>
+            {{end}}
+            <tr class="new-record-row">
+                <td class="row-number-col">+</td>
+                <td colspan="{{add (len $fields) 1}}">
+                    <button class="add-row-button"
+                        hx-get="/admin/t/{{$config.Name | lower}}/records/new?{{gridQuery $grid $grid.Page}}"
+                        hx-target="#record-drawer"
+                        hx-swap="innerHTML">Add a new {{$config.Name | lower}}</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="sheet-footer">
+    <div class="sheet-page-status">
+        Page {{$grid.Page}} of {{$grid.TotalPages}} &middot; {{$grid.TotalCount}} records
+    </div>
+    <div class="sheet-pagination">
+        {{if gt $grid.Page 1}}
+        <a class="sheet-page-button"
+           href="/admin/t/{{$config.Name | lower}}?{{gridQuery $grid (sub $grid.Page 1)}}"
+           hx-get="/admin/t/{{$config.Name | lower}}/grid?{{gridQuery $grid (sub $grid.Page 1)}}"
+           hx-target="#workspace-grid"
+           hx-swap="innerHTML">Prev</a>
+        {{else}}
+        <span class="sheet-page-button disabled" aria-disabled="true">Prev</span>
+        {{end}}
+        {{if lt $grid.Page $grid.TotalPages}}
+        <a class="sheet-page-button"
+           href="/admin/t/{{$config.Name | lower}}?{{gridQuery $grid (add $grid.Page 1)}}"
+           hx-get="/admin/t/{{$config.Name | lower}}/grid?{{gridQuery $grid (add $grid.Page 1)}}"
+           hx-target="#workspace-grid"
+           hx-swap="innerHTML">Next</a>
+        {{else}}
+        <span class="sheet-page-button disabled" aria-disabled="true">Next</span>
+        {{end}}
+    </div>
+</div>

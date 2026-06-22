@@ -61,7 +61,6 @@ gojang/
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/gojangframework/gojang
-   cd gojang
    ```
 
 2. **Copy environment file:**
@@ -74,9 +73,9 @@ gojang/
    go mod download
    ```
 
-4. **Run the application:**
+4. **Run the application in dev mode:**
    ```bash
-   go run ./gojang/cmd/web
+   task dev
    ```
 
 5. **Visit:** http://localhost:8080
@@ -87,7 +86,7 @@ That's it! The database is automatically created and migrated on first run.
 
 You need to run seed program to insert the first admin account
    ```bash
-   go run ./gojang/cmd/seed
+   task seed
    ```
 
 ## ⚒️ Installation

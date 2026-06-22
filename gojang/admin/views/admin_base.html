@@ -19,19 +19,10 @@
             }
         });
 
-        // Close form modal
-        function closeFormModal() {
-            const modal = document.getElementById('form-modal');
-            if (modal) {
-                modal.innerHTML = '';
-            }
-        }
-
-        // Close delete modal
-        function closeDeleteModal() {
-            const modal = document.getElementById('delete-modal');
-            if (modal) {
-                modal.innerHTML = '';
+        function closeRecordDrawer() {
+            const drawer = document.getElementById('record-drawer');
+            if (drawer) {
+                drawer.innerHTML = '';
             }
         }
 
@@ -39,11 +30,8 @@
         document.addEventListener('htmx:afterSwap', function(evt) {
             const trigger = evt.detail.xhr.getResponseHeader('HX-Trigger');
             if (trigger) {
-                if (trigger.includes('closeFormModal')) {
-                    closeFormModal();
-                }
-                if (trigger.includes('closeDeleteModal')) {
-                    closeDeleteModal();
+                if (trigger.includes('closeRecordDrawer')) {
+                    closeRecordDrawer();
                 }
             }
         });
@@ -63,9 +51,7 @@
 
     {{template "admin_footer" .}}
 
-    <!-- Modal containers -->
-    <div id="form-modal"></div>
-    <div id="delete-modal"></div>
+    <div id="record-drawer"></div>
 </body>
 </html>
 
