@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gojangframework/gojang/app/views/forms"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/models/user"
 	"github.com/gojangframework/gojang/gojang/utils"
-	"github.com/gojangframework/gojang/gojang/views/forms"
 	"github.com/gojangframework/gojang/gojang/views/renderers"
 
 	"github.com/alexedwards/scs/v2"

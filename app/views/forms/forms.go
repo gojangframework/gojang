@@ -42,15 +42,6 @@ type PostForm struct {
 	Body    string `form:"body" validate:"required"`
 }
 
-// ProductForm represents product create/update form
-// Uncomment when Product model exists
-// type SampleProductForm struct {
-// 	Name        string  `form:"name" validate:"required,max=255"`
-// 	Description string  `form:"description" validate:"required"`
-// 	Price       float64 `form:"price" validate:"required,gt=0"`
-// 	Stock       int     `form:"stock" validate:"required,gte=0"`
-// }
-
 // Validate validates a form struct
 func Validate(form interface{}) map[string]string {
 	errors := make(map[string]string)

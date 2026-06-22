@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gojangframework/gojang/app/pages"
+	"github.com/gojangframework/gojang/app/posts"
 	"github.com/gojangframework/gojang/gojang/utils"
 
 	"github.com/gojangframework/gojang/gojang/admin"
@@ -109,8 +111,8 @@ func main() {
 	// Setup handlers
 	authHandler := handlers.NewAuthHandler(client, sessionManager, publicRenderer)
 	userHandler := handlers.NewUserHandler(client, publicRenderer)
-	postHandler := handlers.NewPostHandler(client, publicRenderer)
-	pageHandler := handlers.NewPageHandler(publicRenderer)
+	postHandler := posts.NewPostHandler(client, publicRenderer)
+	pageHandler := pages.NewPageHandler(publicRenderer)
 
 	// Setup admin registry and handler
 	adminRegistry := admin.NewRegistry(client)
@@ -170,8 +172,8 @@ func main() {
 	})
 
 	// Mount routes (organized by resource)
-	r.Mount("/", routes.PageRoutes(pageHandler, sessionManager, client))
-	r.Mount("/posts", routes.PostRoutes(postHandler, sessionManager, client))
+	r.Mount("/", pages.PageRoutes(pageHandler, sessionManager, client))
+	r.Mount("/posts", posts.PostRoutes(postHandler, sessionManager, client))
 	r.Mount("/users", routes.UserRoutes(userHandler, sessionManager, client))
 	r.Mount("/admin", admin.AdminRoutes(adminHandler, sessionManager, client))
 

@@ -1,14 +1,13 @@
-package routes
+package posts
 
 import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/http/handlers"
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
 )
 
-func PostRoutes(handler *handlers.PostHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
+func PostRoutes(handler *PostHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
 	r := chi.NewRouter()
 
 	// Public routes

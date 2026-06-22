@@ -1,4 +1,4 @@
-package handlers
+package posts
 
 import (
 	"net/http"
@@ -6,10 +6,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/gojangframework/gojang/app/views/forms"
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/models/post"
-	"github.com/gojangframework/gojang/gojang/views/forms"
 	"github.com/gojangframework/gojang/gojang/views/renderers"
 )
 

@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gojangframework/gojang/app/views/i18n"
 	"github.com/gojangframework/gojang/gojang/utils"
 
 	"github.com/gojangframework/gojang/gojang/http/middleware"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/views"
-	"github.com/gojangframework/gojang/gojang/views/i18n"
 
 	"github.com/justinas/nosurf"
 )
@@ -90,7 +90,11 @@ func parseTemplates(translator *i18n.Translator) (map[string]*template.Template,
 
 	templates := make(map[string]*template.Template)
 
-	baseContent, err := views.TemplateFiles.ReadFile("templates/base.html")
+	basePath, err := findTemplatePath("base.html")
+	if err != nil {
+		return nil, err
+	}
+	baseContent, err := fs.ReadFile(views.TemplateFiles, basePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading base.html: %w", err)
 	}
@@ -99,8 +103,8 @@ func parseTemplates(translator *i18n.Translator) (map[string]*template.Template,
 		return nil, err
 	}
 
-	// Walk the embedded template directory to find all .html files
-	err = fs.WalkDir(views.TemplateFiles, "templates", func(path string, d fs.DirEntry, err error) error {
+	// Walk the app tree to find all directories named "templates".
+	err = fs.WalkDir(views.TemplateFiles, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -110,8 +114,10 @@ func parseTemplates(translator *i18n.Translator) (map[string]*template.Template,
 			return nil
 		}
 
-		// Get relative path from templates directory
-		relPath := strings.TrimPrefix(path, "templates/")
+		relPath, ok := templateNameForPath(path)
+		if !ok {
+			return nil
+		}
 
 		// Components are parsed into pages and fragments, not rendered as pages.
 		if strings.HasPrefix(relPath, "components/") {
@@ -129,7 +135,7 @@ func parseTemplates(translator *i18n.Translator) (map[string]*template.Template,
 		var tmpl *template.Template
 		if isFragment {
 			// Parse fragment standalone
-			content, err := views.TemplateFiles.ReadFile(path)
+			content, err := fs.ReadFile(views.TemplateFiles, path)
 			if err != nil {
 				return fmt.Errorf("reading fragment %s: %w", relPath, err)
 			}
@@ -143,7 +149,7 @@ func parseTemplates(translator *i18n.Translator) (map[string]*template.Template,
 			}
 		} else {
 			// Parse with base.html
-			content, err := views.TemplateFiles.ReadFile(path)
+			content, err := fs.ReadFile(views.TemplateFiles, path)
 			if err != nil {
 				return fmt.Errorf("reading %s: %w", relPath, err)
 			}
@@ -210,19 +216,20 @@ func TemplateFuncMap(translator *i18n.Translator) template.FuncMap {
 
 func readComponentTemplates() ([]string, error) {
 	componentContents := []string{}
-	err := fs.WalkDir(views.TemplateFiles, "templates/components", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(views.TemplateFiles, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			if path == "templates/components" {
-				return nil
-			}
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".html") {
 			return nil
 		}
-		content, err := views.TemplateFiles.ReadFile(path)
+		relPath, ok := templateNameForPath(path)
+		if !ok || !strings.HasPrefix(relPath, "components/") {
+			return nil
+		}
+		content, err := fs.ReadFile(views.TemplateFiles, path)
 		if err != nil {
-			return fmt.Errorf("reading component %s: %w", strings.TrimPrefix(path, "templates/"), err)
+			return fmt.Errorf("reading component %s: %w", relPath, err)
 		}
 		componentContents = append(componentContents, string(content))
 		return nil
@@ -231,6 +238,55 @@ func readComponentTemplates() ([]string, error) {
 		return nil, fmt.Errorf("walking component templates: %w", err)
 	}
 	return componentContents, nil
+}
+
+func findTemplatePath(name string) (string, error) {
+	preferred := "views/templates/" + name
+	if _, err := fs.Stat(views.TemplateFiles, preferred); err == nil {
+		return preferred, nil
+	}
+
+	var found string
+	err := fs.WalkDir(views.TemplateFiles, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".html") {
+			return nil
+		}
+		relPath, ok := templateNameForPath(path)
+		if ok && relPath == name {
+			found = path
+			return fs.SkipAll
+		}
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("walking template directory: %w", err)
+	}
+	if found == "" {
+		return "", fmt.Errorf("template %s not found", name)
+	}
+	return found, nil
+}
+
+func templateNameForPath(path string) (string, bool) {
+	parts := strings.Split(path, "/")
+	for i, part := range parts {
+		if part != "templates" || i == len(parts)-1 {
+			continue
+		}
+
+		relPath := strings.Join(parts[i+1:], "/")
+		if relPath == "" || !strings.HasSuffix(relPath, ".html") {
+			return "", false
+		}
+		if i > 0 && parts[i-1] != "views" {
+			relPath = parts[i-1] + "/" + relPath
+		}
+		return relPath, true
+	}
+	return "", false
 }
 
 func parseComponentTemplates(tmpl *template.Template, componentContents []string) (*template.Template, error) {

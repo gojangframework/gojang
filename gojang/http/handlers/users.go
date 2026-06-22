@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/gojangframework/gojang/app/views/forms"
 	"github.com/gojangframework/gojang/gojang/models"
 	"github.com/gojangframework/gojang/gojang/models/user"
-	"github.com/gojangframework/gojang/gojang/views/forms"
 	"github.com/gojangframework/gojang/gojang/views/renderers"
 )
 

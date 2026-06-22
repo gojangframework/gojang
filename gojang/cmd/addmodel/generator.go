@@ -35,10 +35,10 @@ func createSchema(path, modelName string, fields []Field, includeTimestamps bool
 
 	// Build fields code
 	var fieldsCode strings.Builder
-	
+
 	// Add UUID ID field as the first field
 	fieldsCode.WriteString("\t\tfield.UUID(\"id\", uuid.UUID{}).\n\t\t\tDefault(uuid.New),\n\t\t\n")
-	
+
 	for _, field := range fields {
 		fieldsCode.WriteString(fmt.Sprintf("\t\tfield.%s(\"%s\")", getEntFieldType(field.Type), field.Name))
 
@@ -179,7 +179,7 @@ func createHandler(path, modelName string, fields []Field) error {
 	importsBuilder.WriteString(`"github.com/go-chi/chi/v5"` + "\n\t")
 	importsBuilder.WriteString(`"github.com/google/uuid"` + "\n\t")
 	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/models"` + "\n\t")
-	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/forms"` + "\n\t")
+	importsBuilder.WriteString(`"github.com/gojangframework/gojang/app/views/forms"` + "\n\t")
 	importsBuilder.WriteString(`"github.com/gojangframework/gojang/gojang/views/renderers"`)
 	imports := importsBuilder.String()
 

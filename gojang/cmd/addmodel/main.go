@@ -271,7 +271,7 @@ func executeModelCreation(projectRoot, modelName, modelIcon string, fields []Fie
 	// Step 3: Create form struct
 	fmt.Println()
 	fmt.Println("📝 Step 3: Adding form validation struct...")
-	formsPath := filepath.Join(projectRoot, "gojang", "views", "forms", "forms.go")
+	formsPath := filepath.Join(projectRoot, "app", "views", "forms", "forms.go")
 	if err := addFormStruct(formsPath, modelName, fields); err != nil {
 		log.Fatalf("❌ Failed to add form struct: %v", err)
 	}
@@ -307,7 +307,7 @@ func executeModelCreation(projectRoot, modelName, modelIcon string, fields []Fie
 	// Step 7: Create templates
 	fmt.Println()
 	fmt.Println("📝 Step 7: Creating templates...")
-	templatePath := filepath.Join(projectRoot, "gojang", "views", "templates", strings.ToLower(modelName)+"s")
+	templatePath := filepath.Join(projectRoot, "app", "views", "templates", strings.ToLower(modelName)+"s")
 	if err := createTemplates(templatePath, modelName, fields); err != nil {
 		log.Fatalf("❌ Failed to create templates: %v", err)
 	}

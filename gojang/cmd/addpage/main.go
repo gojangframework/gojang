@@ -67,9 +67,9 @@ func main() {
 		log.Fatalf("❌ Failed to find project root: %v", err)
 	}
 
-	templatePath := filepath.Join(projectRoot, "gojang", "views", "templates")
-	handlerPath := filepath.Join(projectRoot, "gojang", "http", "handlers", "pages.go")
-	routesPath := filepath.Join(projectRoot, "gojang", "http", "routes", "pages.go")
+	templatePath := filepath.Join(projectRoot, "app", "views", "templates")
+	handlerPath := filepath.Join(projectRoot, "app", "pages", "pages.handler.go")
+	routesPath := filepath.Join(projectRoot, "app", "pages", "pages.route.go")
 
 	// Generate template file name
 	templateFileName := strings.ToLower(strings.ReplaceAll(pageName, " ", "-")) + ".html"

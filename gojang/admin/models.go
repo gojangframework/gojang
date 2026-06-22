@@ -131,14 +131,4 @@ func RegisterModels(registry *Registry) {
 		},
 	})
 
-	// Register SampleProduct model - example for demonstration
-	// Uncomment when SampleProduct model exists
-	// registry.RegisterSampleModel(ModelRegistration{
-	// 	ModelType:      &models.SampleProduct{},
-	// 	Icon:           "📦",
-	// 	NamePlural:     "SampleProducts",
-	// 	ListFields:     []string{"ID", "Name", "Price", "Stock", "Description"},
-	// 	ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
-	// })
-
 }
