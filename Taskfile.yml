@@ -60,16 +60,6 @@ tasks:
     cmds:
       - go run {{.SEED_MAIN}}
 
-  addpage:
-    desc: Create a new static page interactively
-    cmds:
-      - go run ./gojang/cmd/addpage
-
-  addmodel:
-    desc: Create a new data model interactively
-    cmds:
-      - go run ./gojang/cmd/addmodel
-
   clean:
     desc: Clean build artifacts and generated files
     cmds:
