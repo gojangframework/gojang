@@ -8,33 +8,6 @@ This guide shows you how to add a simple SampleProduct model with 4 properties. 
 
 ---
 
-## 🚀 Automated Option (NEW!)
-
-**Want to skip manual setup?** Use the `addmodel` command to automatically generate everything:
-
-```bash
-# Interactive mode - you'll be prompted for details
-task addmodel
-
-# Or use command-line flags for automation
-go run ./gojang/cmd/addmodel \
-  --model SampleProduct \
-  --icon "📦" \
-  --fields "name:string:required,price:float:required,stock:int,description:text"
-```
-
-This automatically creates all the files shown in the manual steps below. Perfect for rapid prototyping!
-
-**Features:**
-- ✅ Dry-run mode to preview changes (`--dry-run`)
-- ✅ Reserved keyword validation
-- ✅ Command-line automation support
-- ✅ Comprehensive examples (`--examples`)
-
-See `gojang/cmd/addmodel/README.md` for full documentation or continue below for manual step-by-step instructions.
-
----
-
 ## Manual Setup (Learn the Details)
 
 Follow these steps to understand how models are structured in Gojang:

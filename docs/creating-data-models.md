@@ -5,46 +5,6 @@ This comprehensive guide shows you how to add a complete data model to your Goja
 > **🎉 Updated October 2025:** The admin panel now uses reflection for automatic CRUD operations!  
 > No more manual switch statements in `registry.go` - just register your model and it works automatically.
 
-## 🚀 Automated Model Generation (NEW!)
-
-**Skip manual setup!** Use the `addmodel` command to automatically generate complete CRUD functionality:
-
-```bash
-# Interactive mode
-task addmodel
-
-# Non-interactive mode with flags
-go run ./gojang/cmd/addmodel \
-  --model Product \
-  --icon "📦" \
-  --fields "name:string:required,description:text,price:float:required,stock:int"
-```
-
-**New Features:**
-- ✅ **Dry-Run Mode** - Preview changes before committing (`--dry-run`)
-- ✅ **Reserved Keyword Validation** - Prevents Go keyword conflicts
-- ✅ **Command-Line Automation** - Perfect for CI/CD pipelines
-- ✅ **Built-in Examples** - Run `--examples` for usage guide
-- ✅ **Colorized Output** - Easy-to-read console messages
-- ✅ **Timestamp Control** - Optional created_at fields
-
-**Example with dry-run:**
-```bash
-# Preview what would be created
-go run ./gojang/cmd/addmodel \
-  --model Article \
-  --fields "title:string:required,content:text:required" \
-  --dry-run
-```
-
-See `gojang/cmd/addmodel/README.md` for comprehensive documentation.
-
----
-
-## Manual Setup (Advanced)
-
-For complete control over your models or to understand the internals, follow the manual steps below.
-
 ## Overview
 
 Adding a new data model involves these steps:
@@ -55,7 +15,7 @@ Adding a new data model involves these steps:
 5. Create templates
 6. Register with admin panel (**now automatic!**)
 
-**Estimated time:** ~~20-30 minutes~~ **→ 10-15 minutes per model** ⚡ (or instant with `addmodel` command!)
+**Estimated time:** 10-15 minutes per model
 
 ---
 

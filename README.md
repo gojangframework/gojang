@@ -139,8 +139,6 @@ task test             # Run tests
 task migrate          # Run database migrations
 task seed             # Seed database with initial data
 task schema-gen       # Generate Ent code after schema changes
-task addpage          # Create a new static page interactively
-task addmodel         # Create a new data model interactively
 ```
 
 Or use plain Go commands:
@@ -152,52 +150,6 @@ go test ./...                         # Run tests
 cd gojang/models && go generate ./... # Generate code
 ```
 
-## 🤖 Automation Commands
-
-Gojang includes powerful code generators to speed up development:
-
-### Add a New Data Model
-
-Automatically generate a complete CRUD model with handlers, routes, templates, and admin integration:
-
-```bash
-task addmodel
-# or
-go run ./gojang/cmd/addmodel
-```
-
-This interactive tool will:
-- ✅ Create Ent schema with fields
-- ✅ Generate database code
-- ✅ Add form validation
-- ✅ Create CRUD handlers
-- ✅ Set up routes
-- ✅ Generate HTML templates
-- ✅ Register with admin panel
-
-**Example:**
-```bash
-$ task addmodel
-Model name: Product
-Icon: 📦
-Fields: name:string, price:float, stock:int
-# Creates complete CRUD in seconds!
-```
-
-See [Add Model Documentation](./gojang/cmd/addmodel/README.md) for details.
-
-### Add a Static Page
-
-Quickly add a new static page:
-
-```bash
-task addpage
-# or
-go run ./gojang/cmd/addpage
-```
-
-Creates template, handler, and route for simple pages like About, Contact, etc.
-
 ## 📚 Documentation
 
 Ready to start building? Check out our comprehensive guides:
@@ -208,20 +160,6 @@ Ready to start building? Check out our comprehensive guides:
 - **[Documentation Index](./docs/README.md)** - Complete guide with all tutorials
 
 ### Quick Examples
-
-**Add a simple page (Automated):**
-```bash
-go run ./gojang/cmd/addpage
-# Interactive prompt creates everything!
-```
-
-**Add a data model (Automated):**
-```bash
-go run ./gojang/cmd/addmodel
-# Interactive prompt creates complete CRUD!
-```
-
-**Manual approach:**
 ```go
 // 1. Create schema: gojang/models/schema/product.go
 // 2. Generate: go generate ./...
