@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang Data Model"
+  short_description: "Add Ent models, CRUD, forms, and routes"
+  default_prompt: "Use $gojang-add-data-model to add a new data-backed feature to this Gojang app."

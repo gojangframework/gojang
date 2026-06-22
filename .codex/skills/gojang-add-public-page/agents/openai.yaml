@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang Public Page"
+  short_description: "Add public pages and routes in Gojang"
+  default_prompt: "Use $gojang-add-public-page to add a new public page to this Gojang app."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang Admin Workspace"
+  short_description: "Customize registry-driven admin CRUD"
+  default_prompt: "Use $gojang-admin-workspace to register or customize a Gojang admin resource."

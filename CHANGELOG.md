@@ -1,3 +1,10 @@
+v0.3 - 6/22/2026
+- New file structure - app base folder - app dev files and gojang framework files separated
+- New Airtable like admin site - all data model automatically ported - no more manual data model registry for admin site
+- Docs updated to match the new file structure
+- Gojang skills added - AI native framework - Gojang as a starting template for AI agents - start with comprehensive and secure boilerplate and save time and tokens
+- addPage and addModel automations removed
+
 v0.2 - 6/16/2026
 - include view templates in builds
 - email queueing
