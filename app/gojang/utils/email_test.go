@@ -16,13 +16,21 @@ type sentEmail struct {
 }
 
 type fakeEmailSender struct {
-	mu       sync.Mutex
-	sent     []sentEmail
-	block    chan struct{}
-	sendDone chan struct{}
+	mu          sync.Mutex
+	sent        []sentEmail
+	block       chan struct{}
+	sendStarted chan struct{}
+	sendDone    chan struct{}
 }
 
 func (f *fakeEmailSender) SendMail(ctx context.Context, from string, to []string, msg []byte) error {
+	if f.sendStarted != nil {
+		select {
+		case f.sendStarted <- struct{}{}:
+		default:
+		}
+	}
+
 	if f.block != nil {
 		select {
 		case <-f.block:
@@ -104,7 +112,10 @@ func TestEmailServiceQueuesAndSendsEmail(t *testing.T) {
 }
 
 func TestEmailServiceReturnsQueueFull(t *testing.T) {
-	sender := &fakeEmailSender{block: make(chan struct{})}
+	sender := &fakeEmailSender{
+		block:       make(chan struct{}),
+		sendStarted: make(chan struct{}, 1),
+	}
 	service := newEmailServiceWithSender(sender, EmailConfig{
 		FromAddress: "noreply@example.com",
 		MaxSendRate: 100,
@@ -123,6 +134,13 @@ func TestEmailServiceReturnsQueueFull(t *testing.T) {
 	if err := service.SendEmail(msg); err != nil {
 		t.Fatalf("first SendEmail() error = %v", err)
 	}
+
+	select {
+	case <-sender.sendStarted:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for first email to start sending")
+	}
+
 	if err := service.SendEmail(msg); err != nil {
 		t.Fatalf("second SendEmail() error = %v", err)
 	}
