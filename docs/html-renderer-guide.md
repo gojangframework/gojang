@@ -12,10 +12,11 @@ The Gojang renderer handles:
 - 📦 Base template inheritance
 
 **Key Files:**
-- `gojang/views/renderers/renderer.go` - Public site renderer
-- `gojang/admin/admin_renderer.go` - Admin panel renderer
-- `gojang/views/templates/` - Public templates
-- `gojang/admin/views/` - Admin templates
+- `app/gojang/views/renderers/renderer.go` - Public site renderer
+- `app/gojang/admin/admin_renderer.go` - Admin panel renderer
+- `app/views/templates/` - Shared public templates
+- `app/<feature>/templates/` - Feature-owned public templates
+- `app/gojang/admin/views/` - Admin templates
 
 ---
 
@@ -27,7 +28,7 @@ When your app starts, the renderer walks the template directory and parses all `
 
 ```go
 renderer, err := renderers.NewRenderer(debug)
-// Automatically parses all templates in gojang/views/templates/
+// Automatically parses embedded app templates.
 ```
 
 **What happens:**
@@ -482,10 +483,10 @@ func (h *PostHandler) Index(w http.ResponseWriter, r *http.Request) {
 
 ```go
 // ❌ Don't do this in production
-renderer := renderers.NewRenderer(true)  // debug = true
+renderer, err := renderers.NewRenderer(true)  // debug = true
 
 // ✅ Production configuration
-renderer := renderers.NewRenderer(false)  // debug = false
+renderer, err := renderers.NewRenderer(false)  // debug = false
 ```
 
 **Why?**
@@ -529,7 +530,7 @@ The admin panel has its own renderer with slight differences:
 | Feature | Public Renderer | Admin Renderer |
 |---------|----------------|----------------|
 | Base template | `base.html` | `admin_base.html` |
-| Template dir | `views/templates/` | `admin/views/` |
+| Template dir | `app/views/templates/` and feature `templates/` folders | `app/gojang/admin/views/` |
 | Partial handling | Standard | Always fragments |
 | Extra functions | Basic | `fieldValue`, `getID`, `formatDateTime` |
 
@@ -598,14 +599,14 @@ if len(errors) > 0 {
 
 ### Creating a New Page
 
-1. Create template: `views/templates/mypage.html`
+1. Create template: `app/views/templates/mypage.html`
 2. Define blocks: `{{define "title"}}` and `{{define "content"}}`
 3. Create handler: `func (h *PageHandler) MyPage(w, r) { ... }`
 4. Render: `h.Renderer.Render(w, r, "mypage.html", data)`
 
 ### Creating a Partial
 
-1. Create template: `views/templates/mypartial.partial.html`
+1. Create template: `app/views/templates/mypartial.partial.html`
 2. No blocks needed - just raw HTML
 3. Create handler that renders it
 4. Use HTMX: `hx-get="/endpoint" hx-target="#somewhere"`
@@ -628,7 +629,7 @@ Error: template mypage.html not found
 ```
 
 **Solutions:**
-1. Check file exists in `views/templates/`
+1. Check file exists in `app/views/templates/`
 2. Check file name matches exactly (case-sensitive)
 3. Check file has `.html` extension
 4. Restart server to reload templates (if not in debug mode)

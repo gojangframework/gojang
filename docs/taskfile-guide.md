@@ -50,7 +50,7 @@ task migrate
 **Example:**
 ```bash
 $ task migrate
-task: [migrate] go run ./gojang/cmd/migrate/main.go up
+task: [migrate] go run ./app/cmd/migrate/main.go up
 ✅ All migrations applied successfully
 ```
 
@@ -73,7 +73,7 @@ task migrate-down
 **Example:**
 ```bash
 $ task migrate-down
-task: [migrate-down] go run ./gojang/cmd/migrate/main.go down
+task: [migrate-down] go run ./app/cmd/migrate/main.go down
 ✅ Last migration rolled back successfully
 ```
 
@@ -94,16 +94,16 @@ task migrate-create name=<migration_name>
 - `name` - Name for the migration (e.g., `add_products_table`, `add_user_status_field`)
 
 **Output:**
-Creates two files in `gojang/models/migrations/`:
+Creates two files in `app/gojang/models/migrations/`:
 - `NNNNNN_<name>.up.sql` - Migration to apply changes
 - `NNNNNN_<name>.down.sql` - Migration to rollback changes
 
 **Example:**
 ```bash
 $ task migrate-create name=add_products_table
-task: [migrate-create] migrate create -ext sql -dir gojang/models/migrations -seq add_products_table
-/home/runner/work/gojang-dev/gojang-dev/gojang/models/migrations/000002_add_products_table.up.sql
-/home/runner/work/gojang-dev/gojang-dev/gojang/models/migrations/000002_add_products_table.down.sql
+task: [migrate-create] migrate create -ext sql -dir app/gojang/models/migrations -seq add_products_table
+/home/runner/work/gojang-dev/gojang-dev/app/gojang/models/migrations/000002_add_products_table.up.sql
+/home/runner/work/gojang-dev/gojang-dev/app/gojang/models/migrations/000002_add_products_table.down.sql
 ```
 
 **Next Steps:**
@@ -197,8 +197,8 @@ When you need to add or modify database schema:
 task migrate-create name=add_email_verification
 
 # Edit the generated files
-# - gojang/models/migrations/NNNNNN_add_email_verification.up.sql
-# - gojang/models/migrations/NNNNNN_add_email_verification.down.sql
+# - app/gojang/models/migrations/NNNNNN_add_email_verification.up.sql
+# - app/gojang/models/migrations/NNNNNN_add_email_verification.down.sql
 
 # Apply the migration
 task migrate
@@ -270,17 +270,17 @@ go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@late
 **Solution:** This happens when a migration partially fails. You can force the version:
 ```bash
 # Check current version
-migrate -path gojang/models/migrations -database "sqlite://app.db" version
+migrate -path app/gojang/models/migrations -database "sqlite://app.db" version
 
 # Force to a specific version (use with caution!)
-migrate -path gojang/models/migrations -database "sqlite://app.db" force VERSION
+migrate -path app/gojang/models/migrations -database "sqlite://app.db" force VERSION
 ```
 
 **Problem:** Need to see migration status
 
 **Solution:** You can use the migrate CLI directly:
 ```bash
-migrate -path gojang/models/migrations -database "sqlite://app.db" version
+migrate -path app/gojang/models/migrations -database "sqlite://app.db" version
 ```
 
 ---

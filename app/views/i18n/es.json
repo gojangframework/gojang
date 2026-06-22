@@ -102,8 +102,5 @@
   "not_found_title": "404 no encontrado - Gojang",
   "page_not_found": "Pagina no encontrada",
   "page_missing_message": "La pagina que buscas no existe o fue movida.",
-  "go_back": "Volver",
-  "sample_page_title": "Pagina de ejemplo - Gojang",
-  "sample_page_heading": "Pagina de ejemplo",
-  "sample_page_body": "Esta es una pagina de ejemplo para demostrar el renderizado de plantillas en Gojang."
+  "go_back": "Volver"
 }

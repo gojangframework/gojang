@@ -666,8 +666,8 @@ HTMX works seamlessly with authentication middleware:
 ```go
 // In routes
 r.Group(func(r chi.Router) {
-    r.Use(middleware.RequireAuth)
-    
+    r.Use(middleware.RequireAuth(sm, client))
+
     r.Get("/posts/new", handler.New)
     r.Post("/posts", handler.Create)
     r.Put("/posts/{id}", handler.Update)
@@ -979,18 +979,18 @@ Here's a complete CRUD example combining all patterns:
 </div>
 ```
 
-### Handler: `todos.go`
+### Handler: `app/todos/todos.handler.go`
 
 ```go
-package handlers
+package todos
 
 import (
     "net/http"
     "strconv"
     
     "github.com/go-chi/chi/v5"
-    "github.com/gojangframework/gojang/gojang/models"
-    "github.com/gojangframework/gojang/gojang/views/renderers"
+    "github.com/gojangframework/gojang/app/gojang/models"
+    "github.com/gojangframework/gojang/app/gojang/views/renderers"
 )
 
 type TodoHandler struct {
@@ -1096,7 +1096,7 @@ func (h *TodoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 - ✅ **Practice:** Try adding HTMX to your existing pages
 - ✅ **Read:** [HTMX Documentation](https://htmx.org/docs/)
-- ✅ **Explore:** Check `gojang/views/templates/posts/` for more examples
+- ✅ **Explore:** Check `app/posts/templates/` for more examples
 - ✅ **Build:** Create your own CRUD feature using these patterns
 
 ---

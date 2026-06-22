@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gojangframework/gojang/gojang/views/renderers"
+	"github.com/gojangframework/gojang/app/gojang/views/renderers"
 )
 
 type PageHandler struct {
@@ -29,11 +29,6 @@ func (h *PageHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		Title: "Dashboard",
 	})
 }
-
-// Example of a page handler
-// func (h *PageHandler) Sample(w http.ResponseWriter, r *http.Request) {
-// 	h.Renderer.Render(w, r, "sample-page.html", nil)
-// }
 
 // NotFound renders the 404 page
 func (h *PageHandler) NotFound(w http.ResponseWriter, r *http.Request) {

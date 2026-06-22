@@ -102,8 +102,5 @@
   "not_found_title": "404 Not Found - Gojang",
   "page_not_found": "Page Not Found",
   "page_missing_message": "The page you are looking for does not exist or has been moved.",
-  "go_back": "Go Back",
-  "sample_page_title": "Sample Page - Gojang",
-  "sample_page_heading": "Sample Page",
-  "sample_page_body": "This is a sample page to demonstrate template rendering in Gojang."
+  "go_back": "Go Back"
 }

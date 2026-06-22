@@ -102,8 +102,5 @@
   "not_found_title": "404 찾을 수 없음 - Gojang",
   "page_not_found": "페이지를 찾을 수 없습니다",
   "page_missing_message": "찾는 페이지가 없거나 이동되었습니다.",
-  "go_back": "뒤로",
-  "sample_page_title": "샘플 페이지 - Gojang",
-  "sample_page_heading": "샘플 페이지",
-  "sample_page_body": "이 페이지는 Gojang의 템플릿 렌더링을 보여주는 샘플 페이지입니다."
+  "go_back": "뒤로"
 }

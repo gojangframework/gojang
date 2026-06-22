@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gojangframework/gojang/gojang/utils"
+	"github.com/gojangframework/gojang/app/gojang/utils"
 )
 
 var validate = validator.New()

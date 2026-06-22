@@ -39,21 +39,17 @@ A modern, batteries-included web framework for Go with HTMX. Build dynamic web a
 ## 📁 Project Structure
 
 ```
-gojang/
-├── admin/             # Auto-generated admin panel
-├── cmd/web/           # Application entry point
-├── config/            # Configuration management
-├── http/
-│   ├── handlers/      # Request handlers
-│   ├── middleware/    # Auth, security, sessions
-│   └── routes/        # Route definitions
-├── models/
-│   └── schema/        # Database models (define here)
-├── views/
-│   ├── forms/         # Form validation structs
-│   ├── renderers/     # View renderer 
-│   ├── templates/     # HTML templates
-└── └── static/        # CSS, images
+app/
+├── cmd/               # Application commands
+│   ├── migrate/
+│   ├── seed/
+│   └── web/
+├── gojang/            # Framework core, admin, auth, models, renderers
+├── pages/             # App-owned page handlers, routes, and templates
+├── posts/             # App-owned post handlers, routes, and templates
+└── views/
+    ├── i18n/          # Public translation files
+    └── static/        # Public CSS, images
 ```
 
 ## 🚀 Quick Start
@@ -144,10 +140,10 @@ task schema-gen       # Generate Ent code after schema changes
 Or use plain Go commands:
 
 ```bash
-go run ./gojang/cmd/web              # Run server
-go build -o app ./gojang/cmd/web     # Build binary
+go run ./app/cmd/web                 # Run server
+go build -o app ./app/cmd/web        # Build binary
 go test ./...                         # Run tests
-cd gojang/models && go generate ./... # Generate code
+go generate ./app/gojang/models     # Generate code
 ```
 
 ## 📚 Documentation
@@ -161,8 +157,8 @@ Ready to start building? Check out our comprehensive guides:
 
 ### Quick Examples
 ```go
-// 1. Create schema: gojang/models/schema/product.go
-// 2. Generate: go generate ./...
+// 1. Create schema: app/gojang/models/schema/product.go
+// 2. Generate: go generate ./app/gojang/models
 // 3. Register admin: registry.RegisterModel(...)
 ```
 

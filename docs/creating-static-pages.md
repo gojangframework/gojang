@@ -15,9 +15,9 @@ Creating a static page involves three simple steps:
 
 ## Step 1: Create the Template
 
-Templates are located in `gojang/views/templates/`.
+Top-level public page templates are located in `app/views/templates/`. Feature-specific templates can live beside their feature package, such as `app/posts/templates/`.
 
-### Create `gojang/views/templates/about.html`
+### Create `app/views/templates/about.html`
 
 ```html
 {{define "title"}}About Us{{end}}
@@ -73,9 +73,9 @@ The template automatically inherits from `base.html`, which includes:
 
 ## Step 2: Create the Handler
 
-Handlers are located in `gojang/http/handlers/pages.go`.
+Handlers are located in `app/pages/pages.handler.go`.
 
-### Add to `gojang/http/handlers/pages.go`
+### Add to `app/pages/pages.handler.go`
 
 ```go
 // About renders the about page
@@ -124,7 +124,7 @@ Then access in template:
 #### Page with Current User
 ```go
 func (h *PageHandler) Profile(w http.ResponseWriter, r *http.Request) {
-	user, _ := middleware.GetUserFromContext(r.Context())
+	user := middleware.GetUser(r.Context())
 	
 	h.Renderer.Render(w, r, "profile.html", &renderers.TemplateData{
 		Title: "My Profile",
@@ -139,19 +139,23 @@ func (h *PageHandler) Profile(w http.ResponseWriter, r *http.Request) {
 
 ## Step 3: Register the Route
 
-Routes are located in `gojang/http/routes/pages.go`.
+Routes are located in `app/pages/pages.route.go`.
 
-### Add to `gojang/http/routes/pages.go`
+### Add to `app/pages/pages.route.go`
 
-Find the `RegisterPageRoutes` function and add your route:
+Find the `PageRoutes` function and add your route:
 
 ```go
-func RegisterPageRoutes(r chi.Router, handler *handlers.PageHandler) {
+func PageRoutes(handler *PageHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
+	r := chi.NewRouter()
+
 	// Existing routes
 	r.Get("/", handler.Home)
-	
+
 	// Add your new route
 	r.Get("/about", handler.About)
+
+	return r
 }
 ```
 
@@ -167,7 +171,7 @@ r.Get("/terms", handler.Terms)
 #### Route with Authentication Required
 ```go
 r.Group(func(r chi.Router) {
-	r.Use(middleware.RequireAuth)
+	r.Use(middleware.RequireAuth(sm, client))
 	r.Get("/dashboard", handler.Dashboard)
 	r.Get("/settings", handler.Settings)
 })
@@ -176,9 +180,9 @@ r.Group(func(r chi.Router) {
 #### Route with Admin Permission
 ```go
 r.Group(func(r chi.Router) {
-	r.Use(middleware.RequireAuth)
-	r.Use(middleware.RequirePermission("is_staff"))
-	r.Get("/admin-panel", handler.AdminPanel)
+	r.Use(middleware.RequireAuth(sm, client))
+	r.Use(middleware.RequireStaff)
+	r.Get("/staff-panel", handler.StaffPanel)
 })
 ```
 
@@ -199,7 +203,7 @@ func (h *PageHandler) BlogPost(w http.ResponseWriter, r *http.Request) {
 
 Let's create a complete contact page from scratch.
 
-### 1. Create `gojang/views/templates/contact.html`
+### 1. Create `app/views/templates/contact.html`
 
 ```html
 {{define "title"}}Contact Us{{end}}
@@ -250,7 +254,7 @@ Let's create a complete contact page from scratch.
 {{end}}
 ```
 
-### 2. Add Handler to `gojang/http/handlers/pages.go`
+### 2. Add Handler to `app/pages/pages.handler.go`
 
 ```go
 // Contact renders the contact page
@@ -266,19 +270,23 @@ func (h *PageHandler) Contact(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### 3. Register Route in `gojang/http/routes/pages.go`
+### 3. Register Route in `app/pages/pages.route.go`
 
 ```go
-func RegisterPageRoutes(r chi.Router, handler *handlers.PageHandler) {
+func PageRoutes(handler *PageHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
+	r := chi.NewRouter()
+
 	r.Get("/", handler.Home)
 	r.Get("/about", handler.About)
 	r.Get("/contact", handler.Contact)  // ✅ Add this line
+
+	return r
 }
 ```
 
 ### 4. Test Your Page
 
-1. Restart the server: `go run ./gojang/cmd/web`
+1. Restart the server: `go run ./app/cmd/web`
 2. Visit: http://localhost:8080/contact
 3. ✅ Done!
 
@@ -288,7 +296,7 @@ func RegisterPageRoutes(r chi.Router, handler *handlers.PageHandler) {
 
 To add your new page to the navigation menu:
 
-### Edit `gojang/views/templates/base.html`
+### Edit `app/views/templates/base.html`
 
 Find the navigation section and add your link:
 
@@ -415,12 +423,12 @@ func (h *PageHandler) AboutTeam(w http.ResponseWriter, r *http.Request) {
 ## Troubleshooting
 
 ### Page Not Found (404)
-- ✅ Check route is registered in `routes/pages.go`
-- ✅ Check handler method exists in `handlers/pages.go`
+- ✅ Check route is registered in `app/pages/pages.route.go`
+- ✅ Check handler method exists in `app/pages/pages.handler.go`
 - ✅ Restart the server after changes
 
 ### Template Not Rendering
-- ✅ Check template file exists in `gojang/views/templates/`
+- ✅ Check template file exists in `app/views/templates/`
 - ✅ Check `{{define "title"}}` and `{{define "content"}}` are present
 - ✅ Check for syntax errors in template
 
@@ -440,7 +448,7 @@ func (h *PageHandler) AboutTeam(w http.ResponseWriter, r *http.Request) {
 
 - ✅ **Read:** [Creating Pages with Data Models](./creating-data-models.md)
 - ✅ **Learn:** [HTMX Integration Patterns](./htmx-patterns.md)
-- ✅ **Explore:** Check existing templates in `gojang/views/templates/` for more examples
+- ✅ **Explore:** Check existing templates in `app/views/templates/` for more examples
 
 ---
 
@@ -448,9 +456,9 @@ func (h *PageHandler) AboutTeam(w http.ResponseWriter, r *http.Request) {
 
 | Task | File | Function |
 |------|------|----------|
-| Create template | `gojang/views/templates/page.html` | Define `title` and `content` blocks |
-| Add handler | `gojang/http/handlers/pages.go` | Create `func (h *PageHandler) PageName()` |
-| Register route | `gojang/http/routes/pages.go` | Add `r.Get("/path", handler.Method)` |
-| Add navigation | `gojang/views/templates/base.html` | Add link in `<nav>` section |
+| Create template | `app/views/templates/page.html` | Define `title` and `content` blocks |
+| Add handler | `app/pages/pages.handler.go` | Create `func (h *PageHandler) PageName()` |
+| Register route | `app/pages/pages.route.go` | Add `r.Get("/path", handler.Method)` |
+| Add navigation | `app/views/templates/base.html` | Add link in `<nav>` section |
 
 ---

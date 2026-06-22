@@ -102,8 +102,5 @@
   "not_found_title": "404 Not Found - Gojang",
   "page_not_found": "ページが見つかりません",
   "page_missing_message": "お探しのページは存在しないか移動されました。",
-  "go_back": "戻る",
-  "sample_page_title": "サンプルページ - Gojang",
-  "sample_page_heading": "サンプルページ",
-  "sample_page_body": "これはGojangのテンプレートレンダリングを示すサンプルページです。"
+  "go_back": "戻る"
 }

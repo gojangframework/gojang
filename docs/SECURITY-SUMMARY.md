@@ -11,7 +11,7 @@ This document outlines the security features currently implemented in the Gojang
 ### Password Hashing
 - **Argon2id algorithm** - Industry-standard password hashing (superior to bcrypt)
 - Parameters: 64MB memory, 3 iterations, 2 parallelism, 16-byte salt, 32-byte key
-- Location: `gojang/utils/password.go`
+- Location: `app/gojang/utils/password.go`
 
 ### Features
 - ✅ Constant-time password comparison (prevents timing attacks)
@@ -29,7 +29,7 @@ This document outlines the security features currently implemented in the Gojang
 - **SameSite: Lax** - CSRF protection for navigation requests
 - **Idle timeout: 30 minutes** - Auto-logout after inactivity
 - **Session lifetime: 12 hours** (configurable)
-- Location: `gojang/http/middleware/session.go`
+- Location: `app/gojang/http/middleware/session.go`
 
 ### Features
 - ✅ Session token renewal after login (prevents session fixation)
@@ -53,10 +53,10 @@ This document outlines the security features currently implemented in the Gojang
 - ✅ User management endpoints
 
 ### Locations
-- `gojang/cmd/web/main.go:109` (auth routes)
-- `gojang/http/routes/posts.go:14` (post routes)
-- `gojang/http/routes/users.go:14` (user routes)
-- `gojang/admin/admin_routes.go:13` (admin routes)
+- `app/cmd/web/main.go:109` (auth routes)
+- `app/posts/posts.route.go:14` (post routes)
+- `app/gojang/http/routes/users.go:14` (user routes)
+- `app/gojang/admin/admin_routes.go:13` (admin routes)
 
 ---
 
@@ -69,7 +69,7 @@ This document outlines the security features currently implemented in the Gojang
 - **Memory cleanup** - Periodic cleanup of inactive limiters
 
 ### Implementation
-- Location: `gojang/http/middleware/ratelimit.go`
+- Location: `app/gojang/http/middleware/ratelimit.go`
 - Applied to: Login and registration endpoints
 - IP validation: Extracts real client IP from X-Forwarded-For (first/leftmost IP)
 
@@ -103,7 +103,7 @@ This document outlines the security features currently implemented in the Gojang
    - `max-age=31536000; includeSubDomains`
 
 ### Location
-- `gojang/http/middleware/security.go`
+- `app/gojang/http/middleware/security.go`
 
 ---
 
@@ -115,7 +115,7 @@ This document outlines the security features currently implemented in the Gojang
 - **Debug mode bypass** - Development remains on HTTP
 
 ### Implementation
-- Location: `gojang/http/middleware/security.go` (EnforceHTTPS)
+- Location: `app/gojang/http/middleware/security.go` (EnforceHTTPS)
 - Applied: Globally before all other middleware
 
 ---
@@ -124,7 +124,7 @@ This document outlines the security features currently implemented in the Gojang
 
 ### Server-Side Validation
 - **Library:** github.com/go-playground/validator/v10
-- **Location:** `gojang/views/forms/forms.go`
+- **Location:** `app/views/forms/forms.go`
 
 ### Validated Fields
 - ✅ Email format validation
@@ -144,7 +144,7 @@ This document outlines the security features currently implemented in the Gojang
 
 ### ORM Protection
 - **Ent ORM** - Prevents SQL injection through parameterized queries
-- **Location:** `gojang/models/`
+- **Location:** `app/gojang/models/`
 - **No raw SQL queries** - All database access through ORM
 
 ### Features
@@ -160,7 +160,7 @@ This document outlines the security features currently implemented in the Gojang
 ### Role-Based Access Control (RBAC)
 - **Roles:** regular user, staff, superuser
 - **Fields:** `is_active`, `is_staff`, `is_superuser`
-- **Location:** `gojang/models/schema/user.go`
+- **Location:** `app/gojang/models/schema/user.go`
 
 ### Middleware Protection
 1. **RequireAuth** - Ensures user is authenticated
@@ -192,7 +192,7 @@ This document outlines the security features currently implemented in the Gojang
 - Response status code
 
 ### Location
-- `gojang/http/middleware/audit.go`
+- `app/gojang/http/middleware/audit.go`
 
 ---
 

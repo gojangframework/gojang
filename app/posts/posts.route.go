@@ -3,8 +3,8 @@ package posts
 import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/http/middleware"
-	"github.com/gojangframework/gojang/gojang/models"
+	"github.com/gojangframework/gojang/app/gojang/http/middleware"
+	"github.com/gojangframework/gojang/app/gojang/models"
 )
 
 func PostRoutes(handler *PostHandler, sm *scs.SessionManager, client *models.Client) chi.Router {

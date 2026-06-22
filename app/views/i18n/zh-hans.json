@@ -102,8 +102,5 @@
   "not_found_title": "404 未找到 - Gojang",
   "page_not_found": "页面未找到",
   "page_missing_message": "你要查找的页面不存在或已移动。",
-  "go_back": "返回",
-  "sample_page_title": "示例页面 - Gojang",
-  "sample_page_heading": "示例页面",
-  "sample_page_body": "这是一个用于演示 Gojang 模板渲染的示例页面。"
+  "go_back": "返回"
 }

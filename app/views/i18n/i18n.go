@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/text/language"
@@ -41,15 +39,9 @@ func NewTranslator() (*Translator, error) {
 
 func (t *Translator) loadLanguage(lang string) error {
 	filename := fmt.Sprintf("%s.json", lang)
-	data, err := os.ReadFile(filepath.Join("gojang", "views", "i18n", filename))
+	data, err := translationFiles.ReadFile(filename)
 	if err != nil {
-		data, err = os.ReadFile(filepath.Join("app", "views", "i18n", filename))
-	}
-	if err != nil {
-		data, err = translationFiles.ReadFile(filename)
-		if err != nil {
-			return fmt.Errorf("reading translation file %s: %w", filename, err)
-		}
+		return fmt.Errorf("reading translation file %s: %w", filename, err)
 	}
 
 	translations := make(map[string]interface{})
