@@ -17,7 +17,7 @@ Gojang includes a complete authentication and authorization system with:
 - `app/gojang/http/handlers/auth.go` - Authentication handlers
 - `app/gojang/http/middleware/auth.go` - Authentication middleware
 - `app/gojang/utils/password.go` - Password hashing utilities
-- `app/gojang/models/schema/user.go` - User model schema
+- `app/schema/user.go` - User model schema
 
 ---
 
@@ -28,7 +28,7 @@ Gojang includes a complete authentication and authorization system with:
 The User model includes all necessary fields for authentication:
 
 ```go
-// app/gojang/models/schema/user.go
+// app/schema/user.go
 type User struct {
     ent.Schema
 }
@@ -703,7 +703,7 @@ func (h *PostHandler) Edit(w http.ResponseWriter, r *http.Request) {
 Extend the User model with roles:
 
 ```go
-// app/gojang/models/schema/user.go
+// app/schema/user.go
 func (User) Fields() []ent.Field {
     return []ent.Field{
         // ... existing fields ...

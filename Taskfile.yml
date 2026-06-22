@@ -69,6 +69,7 @@ tasks:
   test:
     desc: Run tests
     cmds:
+      - go generate ./app/gojang/models
       - go test -v ./...
 
   run:

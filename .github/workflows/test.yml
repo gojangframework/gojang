@@ -30,6 +30,9 @@ jobs:
     
     - name: Download dependencies
       run: go mod download
+
+    - name: Generate Ent code
+      run: go generate ./app/gojang/models
     
     - name: Run tests
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...

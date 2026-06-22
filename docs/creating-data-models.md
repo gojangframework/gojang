@@ -27,9 +27,9 @@ Let's build a complete Product catalog feature with full CRUD capabilities.
 
 ## Step 1: Define the Ent Schema
 
-Ent is the ORM used by Gojang. Schemas are defined in `app/gojang/models/schema/`.
+Ent is the ORM used by Gojang. Schemas are defined in `app/schema/`.
 
-### Create `app/gojang/models/schema/product.go`
+### Create `app/schema/product.go`
 
 ```go
 package schema
@@ -100,7 +100,7 @@ func (Product) Edges() []ent.Edge {
 
 ### Update User Schema to Add Relationship
 
-Edit `app/gojang/models/schema/user.go` and add the products edge:
+Edit `app/schema/user.go` and add the products edge:
 
 ```go
 // Edges of the User.
@@ -928,9 +928,9 @@ _, err := h.Client.Product.UpdateOneID(id).
 
 When adding a new model, use this checklist:
 
-- [ ] Create Ent schema in `app/gojang/models/schema/`
+- [ ] Create Ent schema in `app/schema/`
 - [ ] Add relationships to related schemas
-- [ ] Run `go generate ./app/gojang/models` in models directory
+- [ ] Run `go generate ./app/gojang/models`
 - [ ] Create form struct in `app/views/forms/forms.go`
 - [ ] Create handler in `app/products/products.handler.go`
 - [ ] Create routes in `app/products/products.route.go`
@@ -986,7 +986,7 @@ Check for:
 
 - ✅ **Read:** [Creating Static Pages](./creating-static-pages.md)
 - ✅ **Learn:** [HTMX Integration Patterns](./htmx-patterns.md)
-- ✅ **Explore:** Check existing models in `app/gojang/models/schema/` for more examples
+- ✅ **Explore:** Check existing models in `app/schema/` for more examples
 - ✅ **Advanced:** [Ent Documentation](https://entgo.io/docs/getting-started)
 
 ---
@@ -995,7 +995,7 @@ Check for:
 
 | Step | File | Action |
 |------|------|--------|
-| 1. Schema | `app/gojang/models/schema/model.go` | Define fields and edges |
+| 1. Schema | `app/schema/model.go` | Define fields and edges |
 | 2. Generate | Terminal | `go generate ./app/gojang/models` |
 | 3. Form | `app/views/forms/forms.go` | Add validation struct |
 | 4. Handler | `app/products/products.handler.go` | Create CRUD handlers |

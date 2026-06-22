@@ -856,7 +856,6 @@ if err := client.Schema.Create(ctx); err != nil {
 ```bash
 # Generate migration files
 go generate ./app/gojang/models
-go run -mod=mod entgo.io/ent/cmd/ent generate ./schema
 
 # Create migration SQL
 go run main.go migrate --dry-run > migration.sql
@@ -874,7 +873,7 @@ curl -sSf https://atlasgo.sh | sh
 
 # Generate migration
 atlas migrate diff initial \
-  --to "ent://app/gojang/models/schema" \
+  --to "ent://app/schema" \
   --dev-url "sqlite://dev.db"
 
 # Apply migration

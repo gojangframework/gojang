@@ -33,7 +33,7 @@ We'll create:
 
 ## Step 1: Create the Schema
 
-Create a new file `app/gojang/models/schema/product.go`:
+Create a new file `app/schema/product.go`:
 
 ```go
 package schema
@@ -592,8 +592,8 @@ See the [comprehensive guide](./creating-data-models.md) for advanced features.
 
 When adding a new model:
 
-- [ ] Create schema in `app/gojang/models/schema/`
-- [ ] Run `go generate ./app/gojang/models` in models directory
+- [ ] Create schema in `app/schema/`
+- [ ] Run `go generate ./app/gojang/models`
 - [ ] Add form struct to `app/views/forms/forms.go`
 - [ ] Create handler in `app/products/products.handler.go`
 - [ ] Create routes in `app/products/products.route.go`

@@ -1,6 +1,6 @@
 # Gojang Framework
 
-v0.3 - New file structure - separating dev files from Gojang framework files - AI Skills added - Docs updated - addModel and addPage automations removed
+v0.3 - New file structure - separating dev files from Gojang framework files - AI Skills added - Docs updated - addModel and addPage automations removed - Ent schema files moved to more convenient location
 
 v0.2 - Added some changes based on what I learned from another production app that has been built on top of Gojang over the past eight months. I learned a lot about Gojang’s pros and cons, and I hope to make many improvements based on my experience running the app in production.
 
@@ -72,12 +72,16 @@ app/
    go mod download
    ```
 
-4. **Run the application in dev mode:**
+4. **Run Ent schema generation:**
+   ```bash
+   task schema-gen
+   ```
+5. **Run the application in dev mode:**
    ```bash
    task dev
    ```
 
-5. **Visit:** http://localhost:8080
+6. **Visit:** http://localhost:8080
 
 That's it! The database is automatically created and migrated on first run.
 
@@ -160,7 +164,7 @@ Ready to start building? Check out our comprehensive guides:
 
 ### Quick Examples
 ```go
-// 1. Create schema: app/gojang/models/schema/product.go
+// 1. Create schema: app/schema/product.go
 // 2. Generate: go generate ./app/gojang/models
 // 3. Register admin: registry.RegisterModel(...)
 ```

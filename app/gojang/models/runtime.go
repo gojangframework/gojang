@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gojangframework/gojang/app/gojang/models/post"
-	"github.com/gojangframework/gojang/app/gojang/models/schema"
 	"github.com/gojangframework/gojang/app/gojang/models/setting"
 	"github.com/gojangframework/gojang/app/gojang/models/user"
+	"github.com/gojangframework/gojang/app/schema"
 	"github.com/google/uuid"
 )
 

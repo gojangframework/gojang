@@ -10,7 +10,7 @@ Use this skill to add an application resource with database-backed behavior.
 ## Workflow
 
 1. Read `docs/quick-start-data-model.md` for simple resources or `docs/creating-data-models.md` for relationships, validation, or production-ready flows.
-2. Add or update the Ent schema in `app/gojang/models/schema/<resource>.go`.
+2. Add or update the Ent schema in `app/schema/<resource>.go`.
 3. Run `go generate ./app/gojang/models` after schema changes.
 4. Add form structs and validation tags in `app/views/forms/forms.go` when the public UI accepts user input.
 5. Create a feature package such as `app/products/` with:

@@ -4,6 +4,7 @@ v0.3 - 6/22/2026
 - Docs updated to match the new file structure
 - Gojang skills added - AI native framework - Gojang as a starting template for AI agents - start with comprehensive and secure boilerplate and save time and tokens
 - addPage and addModel automations removed
+- Ent schema files moved to more easily accessible location (app/schema)
 
 v0.2 - 6/16/2026
 - include view templates in builds
