@@ -20,7 +20,51 @@
         </div>
     </div>
 </div>
+<section class="ai-skills-section">
+    <div class="container">
+        <div class="ai-skills-header">
+            <div>
+                <span class="ai-eyebrow">Codex-ready workflows</span>
+                <h2>AI Skills Included</h2>
+                <p>
+                    Gojang includes focused AI skills for common framework work, so help from Codex follows
+                    the app's conventions instead of starting from scratch.
+                </p>
+            </div>
+            <div class="ai-skills-summary">
+                <strong>Built for real app work</strong>
+                <span>Models, admin screens, HTMX UI, security, testing, migrations, and operations.</span>
+            </div>
+        </div>
 
+        <div class="ai-skills-grid">
+            <div class="ai-skill-card">
+                <div class="ai-skill-icon">01</div>
+                <h3>Data Models</h3>
+                <span class="ai-skill-tag">Schema to CRUD</span>
+                <p>Add Ent schemas, generated model code, CRUD handlers, forms, migrations, and admin registration.</p>
+            </div>
+            <div class="ai-skill-card">
+                <div class="ai-skill-icon">02</div>
+                <h3>Admin Workspace</h3>
+                <span class="ai-skill-tag">Airtable-like admin</span>
+                <p>Customize admin fields, list columns, hooks, readonly data, and staff-only behavior.</p>
+            </div>
+            <div class="ai-skill-card">
+                <div class="ai-skill-icon">03</div>
+                <h3>HTMX UI</h3>
+                <span class="ai-skill-tag">Server-rendered UX</span>
+                <p>Build server-rendered partials, modals, reusable components, tables, and CSRF-aware interactions.</p>
+            </div>
+            <div class="ai-skill-card">
+                <div class="ai-skill-icon">04</div>
+                <h3>Security and Ops</h3>
+                <span class="ai-skill-tag">Ship with confidence</span>
+                <p>Work on auth, sessions, CSRF, rate limiting, tests, migrations, seeds, and deployment checks.</p>
+            </div>
+        </div>
+    </div>
+</section>
 <section class="features-section">
     <div class="container">
         <div class="features-header">
@@ -241,6 +285,12 @@
     margin: 0 0 1rem 0;
 }
 
+.feature-note {
+    color: #475569;
+    line-height: 1.6;
+    margin: 0 0 1rem 0;
+}
+
 .feature-card ul {
     list-style: none;
     padding: 0;
@@ -257,13 +307,166 @@
     border-bottom: none;
 }
 
+.ai-skills-section {
+    padding: 5rem 0;
+    background:
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%),
+        radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.14), transparent 24%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ai-skills-header {
+    align-items: end;
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+    margin-bottom: 2rem;
+}
+
+.ai-skills-header h2 {
+    color: #1e293b;
+    font-size: 2.5rem;
+    line-height: 1.1;
+    margin: 0 0 1rem 0;
+}
+
+.ai-skills-header p {
+    color: #64748b;
+    font-size: 1.25rem;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 760px;
+}
+
+.ai-eyebrow {
+    color: #2563eb;
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+}
+
+.ai-skills-summary {
+    background: #0f172a;
+    border-radius: 12px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+    color: white;
+    padding: 1.5rem;
+}
+
+.ai-skills-summary strong,
+.ai-skills-summary span {
+    display: block;
+}
+
+.ai-skills-summary strong {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.ai-skills-summary span {
+    color: #cbd5e1;
+    line-height: 1.6;
+}
+
+.ai-skills-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+}
+
+.ai-skill-card {
+    background: white;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+    min-height: 250px;
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.25s ease;
+}
+
+.ai-skill-card:hover {
+    border-color: #bfdbfe;
+    box-shadow: 0 18px 36px rgba(37, 99, 235, 0.14);
+    transform: translateY(-4px);
+}
+
+.ai-skill-icon {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 800;
+    height: 2.4rem;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    width: 2.4rem;
+}
+
+.ai-skill-card h3 {
+    color: #1e293b;
+    font-size: 1.25rem;
+    margin: 0 0 0.75rem 0;
+}
+
+.ai-skill-tag {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    color: #047857;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding: 0.3rem 0.7rem;
+}
+
+.ai-skill-card p {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
 @media (max-width: 1200px) {
-    .features-grid {
+    .features-grid,
+    .ai-skills-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ai-skills-header {
+        align-items: start;
+        grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 768px) {
+    .header-content {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .header .nav {
+        flex-wrap: wrap;
+        gap: 0.65rem 1rem;
+        width: 100%;
+    }
+
+    .header .nav a,
+    .header .nav .btn-link {
+        font-size: 0.98rem;
+    }
+
+    .logo img {
+        max-width: 150px;
+    }
+
     .hero-content h1 {
         font-size: 2rem;
     }
@@ -272,8 +475,17 @@
         grid-template-columns: 1fr;
     }
     
-    .features-grid {
+    .features-grid,
+    .ai-skills-grid {
         grid-template-columns: 1fr;
+    }
+
+    .ai-skills-header h2 {
+        font-size: 2rem;
+    }
+
+    .ai-skills-header p {
+        font-size: 1.1rem;
     }
     
     .cta-buttons {

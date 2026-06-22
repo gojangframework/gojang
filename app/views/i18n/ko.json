@@ -35,7 +35,7 @@
   "framework_features": ["빠른 Go 성능", "타입 안전 개발", "핫 리로드 개발 서버", "유연한 라우팅"],
   "orm_features": ["스키마 우선 Ent ORM", "타입 안전 쿼리", "자동 마이그레이션", "트랜잭션 지원"],
   "security_features": ["내장 인증", "Argon2id 해시", "CSRF 보호", "요청 제한"],
-  "admin_features": ["자동 생성 인터페이스", "전체 CRUD 작업", "모달 기반 폼", "반응형 디자인"],
+  "admin_features": ["자동 생성 인터페이스", "전체 CRUD 작업", "모달 기반 폼", "스프레드시트 레이아웃"],
   "login_title": "로그인 - Gojang",
   "create_account_title": "가입 - Gojang",
   "create_account": "계정 만들기",

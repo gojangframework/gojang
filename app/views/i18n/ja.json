@@ -35,7 +35,7 @@
   "framework_features": ["高速なGo性能", "型安全な開発", "ホットリロード開発サーバー", "柔軟なルーティング"],
   "orm_features": ["スキーマファーストのEnt ORM", "型安全なクエリ", "自動マイグレーション", "トランザクション対応"],
   "security_features": ["組み込み認証", "Argon2idハッシュ", "CSRF保護", "レート制限"],
-  "admin_features": ["自動生成インターフェース", "完全なCRUD操作", "モーダルフォーム", "レスポンシブデザイン"],
+  "admin_features": ["自動生成インターフェース", "完全なCRUD操作", "モーダルフォーム", "スプレッドシートレイアウト"],
   "login_title": "ログイン - Gojang",
   "create_account_title": "登録 - Gojang",
   "create_account": "アカウント作成",

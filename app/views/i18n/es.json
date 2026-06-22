@@ -35,7 +35,7 @@
   "framework_features": ["Rendimiento rapido de Go", "Desarrollo tipado", "Servidor de desarrollo con recarga", "Enrutamiento flexible"],
   "orm_features": ["Ent ORM con esquema primero", "Consultas tipadas", "Migraciones automaticas", "Soporte de transacciones"],
   "security_features": ["Autenticacion integrada", "Hash Argon2id", "Proteccion CSRF", "Limitacion de velocidad"],
-  "admin_features": ["Interfaz generada automaticamente", "Operaciones CRUD completas", "Formularios en modales", "Diseno responsive"],
+  "admin_features": ["Interfaz generada automaticamente", "Operaciones CRUD completas", "Formularios en modales", "Diseno de hoja de calculo"],
   "login_title": "Iniciar sesion - Gojang",
   "create_account_title": "Registro - Gojang",
   "create_account": "Crear cuenta",

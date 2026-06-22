@@ -35,7 +35,7 @@
   "framework_features": ["高速 Go 性能", "类型安全开发", "热重载开发服务器", "灵活路由"],
   "orm_features": ["Ent ORM 架构优先", "类型安全查询", "自动迁移", "事务支持"],
   "security_features": ["内置认证", "Argon2id 哈希", "CSRF 保护", "速率限制"],
-  "admin_features": ["自动生成界面", "完整 CRUD 操作", "模态表单", "响应式设计"],
+  "admin_features": ["自动生成界面", "完整 CRUD 操作", "模态表单", "电子表格布局"],
   "login_title": "登录 - Gojang",
   "create_account_title": "注册 - Gojang",
   "create_account": "创建账户",

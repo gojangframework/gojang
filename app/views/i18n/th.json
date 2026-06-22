@@ -35,7 +35,7 @@
   "framework_features": ["ประสิทธิภาพสูงของ Go", "การพัฒนาแบบ type-safe", "เซิร์ฟเวอร์ dev พร้อม hot reload", "การกำหนด route ที่ยืดหยุ่น"],
   "orm_features": ["Ent ORM แบบ schema-first", "Query แบบ type-safe", "Migration อัตโนมัติ", "รองรับ transaction"],
   "security_features": ["ระบบยืนยันตัวตนในตัว", "Argon2id hashing", "CSRF protection", "Rate limiting"],
-  "admin_features": ["อินเทอร์เฟซสร้างอัตโนมัติ", "CRUD ครบถ้วน", "ฟอร์มแบบ modal", "ดีไซน์ responsive"],
+  "admin_features": ["อินเทอร์เฟซสร้างอัตโนมัติ", "CRUD ครบถ้วน", "ฟอร์มแบบ modal", "เลย์เอาต์สเปรดชีต"],
   "login_title": "เข้าสู่ระบบ - Gojang",
   "create_account_title": "สมัครสมาชิก - Gojang",
   "create_account": "สร้างบัญชี",
