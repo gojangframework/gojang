@@ -52,14 +52,13 @@ Perfect for:
 - Simple CRUD apps
 
 **Topics covered:**
-- 🆕 **Automated generation** with `addmodel` command
 - Minimal 4-property Product example
 - Step-by-step with code snippets
 - Handler, routes, and views
 - Admin panel integration
 - Testing your model
 
-**Time:** ~10 minutes (or instant with `addmodel` command!)
+**Time:** ~10 minutes
 
 ---
 
@@ -74,9 +73,6 @@ Perfect for:
 - Production applications
 
 **Topics covered:**
-- 🆕 **Automated generation** with enhanced `addmodel` command
-- 🆕 **Dry-run mode** for safe preview
-- 🆕 **Command-line automation** for CI/CD
 - Advanced Ent schema features
 - Code generation
 - Database migrations
@@ -86,7 +82,7 @@ Perfect for:
 - Admin panel integration
 - Troubleshooting
 
-**Time:** ~20-30 minutes per model (or instant with automation!)
+**Time:** ~20-30 minutes per model
 
 ---
 
