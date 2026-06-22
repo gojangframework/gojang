@@ -11,42 +11,15 @@ Gojang follows a strict architectural separation between:
 ## Directory Structure
 
 ```
-gojang/
-├── admin/                      # Admin panel (isolated)
-│   ├── handler.go              # Generic CRUD handlers
-│   ├── models.go               # Model registration
-│   ├── registry.go             # Reflection-based operations
-│   ├── admin_renderer.go       # Admin-specific renderer
-│   ├── admin_routes.go         # Admin route definitions
-│   └── views/                  # Admin templates
-│       ├── admin_base.html
-│       ├── admin_main.html
-│       ├── model_index.html
-│       ├── model_list.partial.html
-│       ├── model_form.partial.html
-│       └── model_delete.partial.html
-│
-├── http/
-│   ├── handlers/               # User site handlers (isolated)
-│   │   ├── auth.go
-│   │   ├── pages.go
-│   │   ├── posts.go
-│   │   └── users.go
-│   │
-│   └── routes/                 # User site routes
-│       ├── pages.go
-│       ├── posts.go
-│       └── users.go
-│
-└── views/
-    ├── renderers/
-    │   └── renderer.go         # User site renderer
-    │
-    └── templates/              # User site templates
-        ├── base.html
-        ├── home.html
-        ├── posts/
-        └── users/
+app/
+├── gojang/                     # Framework-owned code
+│   ├── admin/                  # Admin panel, renderer, routes, templates
+│   ├── http/                   # Core auth/user handlers and middleware
+│   ├── models/                 # Ent schemas, generated code, migrations
+│   └── views/                  # Public renderer and embedded FS wiring
+├── pages/                      # App-owned page handlers and routes
+├── posts/                      # App-owned post handlers, routes, templates
+└── views/                      # Shared public templates, static files, i18n, forms
 ```
 
 ## Key Principles
@@ -54,12 +27,12 @@ gojang/
 ### 1. Separate Renderers
 
 **User Site Renderer** (`renderers.Renderer`):
-- Located in `gojang/views/renderers/renderer.go`
+- Located in `app/gojang/views/renderers/renderer.go`
 - Uses `base.html` as layout
 - Handles user-facing templates only
 
 **Admin Renderer** (`admin.AdminRenderer`):
-- Located in `gojang/admin/admin_renderer.go`
+- Located in `app/gojang/admin/admin_renderer.go`
 - Uses `admin_base.html` as layout
 - Handles admin templates only
 
@@ -75,14 +48,11 @@ r.Get("/dashboard", pageHandler.Dashboard)
 
 **Admin Routes**:
 ```go
-// Mounted under /admin prefix with staff-only middleware
-r.Route("/admin", func(r chi.Router) {
-    r.Use(middleware.RequireStaff)
-    r.Get("/", adminHandler.Dashboard)
-    r.Get("/{model}", adminHandler.Index)
-    r.Post("/{model}", adminHandler.Create)
-    // ... generic CRUD for all models
-})
+// Mounted under /admin prefix with auth, staff, and audit middleware.
+r.Mount("/admin", admin.AdminRoutes(adminHandler, sessionManager, client))
+
+// Canonical workspace routes are under /admin/t/{resource}.
+// Legacy /admin/{model} routes redirect into the workspace.
 ```
 
 ### 3. No Cross-References
@@ -117,13 +87,13 @@ The admin panel uses **reflection-based CRUD** that works for ALL models:
 
 ```go
 // Register a model - that's it!
-admin.RegisterModel(admin.ModelRegistration{
-    Name:         "post",
-    Model:        &models.Post{},
-    ListFields:   []string{"ID", "Subject", "CreatedAt"},
-    FormFields:   []string{"Subject", "Body"},
-    SearchFields: []string{"Subject", "Body"},
-    BeforeSave:   beforeSavePost, // Optional hook
+registry.RegisterModel(admin.ModelRegistration{
+    ModelType:      &models.Post{},
+    Icon:           "✎",
+    NamePlural:     "Posts",
+    ListFields:     []string{"ID", "Subject", "Author", "CreatedAt"},
+    ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
+    QueryModifier:  preloadPostAuthor, // Optional hook
 })
 ```
 
@@ -189,8 +159,8 @@ pages := []string{
 
 ```powershell
 # These are handled by generic admin templates now
-Remove-Item gojang/views/templates/posts/admin_index.html
-Remove-Item gojang/views/templates/posts/admin_list.partial.html
+Remove-Item app/posts/templates/admin_index.html
+Remove-Item app/posts/templates/admin_list.partial.html
 ```
 
 ## Benefits of Separation
@@ -208,7 +178,7 @@ When you add a new model (e.g., `Product`):
 
 ### User Site (if needed)
 ```go
-// http/handlers/products.go - custom user experience
+// app/products/products.handler.go - custom user experience
 func (h *ProductHandler) ShowProduct(w http.ResponseWriter, r *http.Request) {
     // Custom user-facing product display
     h.Renderer.Render(w, r, "products/detail.html", data)
@@ -217,16 +187,17 @@ func (h *ProductHandler) ShowProduct(w http.ResponseWriter, r *http.Request) {
 
 ### Admin Panel (always)
 ```go
-// gojang/admin/models.go - just register it!
-admin.RegisterModel(admin.ModelRegistration{
-    Name:       "product",
-    Model:      &models.Product{},
-    ListFields: []string{"ID", "Name", "Price"},
-    FormFields: []string{"Name", "Description", "Price"},
+// app/gojang/admin/models.go - just register it!
+registry.RegisterModel(admin.ModelRegistration{
+    ModelType:      &models.Product{},
+    Icon:           "▦",
+    NamePlural:     "Products",
+    ListFields:     []string{"ID", "Name", "Price"},
+    ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
 })
 ```
 
-That's it! The admin panel automatically provides full CRUD at `/admin/product`.
+That's it! The admin panel automatically provides full CRUD in the workspace at `/admin/t/product`.
 
 ## Verification
 
@@ -250,7 +221,7 @@ To verify proper separation:
    http://localhost:8080/posts
    
    # Admin panel
-   http://localhost:8080/admin/post
+   http://localhost:8080/admin/t/post
    ```
 
 Both should work completely independently!

@@ -49,7 +49,7 @@ Before deploying, ensure:
 # Build for Linux (most common server OS)
 GOOS=linux GOARCH=amd64 go build -o gojang-app \
     -ldflags="-s -w" \
-    ./gojang/cmd/web
+    ./app/cmd/web
 
 # Explanation:
 # -ldflags="-s -w" removes debug info (smaller binary)
@@ -66,16 +66,16 @@ GOOS=linux GOARCH=amd64 go build -o gojang-app \
 
 ```bash
 # Build for Linux
-GOOS=linux GOARCH=amd64 go build -o gojang-linux ./gojang/cmd/web
+GOOS=linux GOARCH=amd64 go build -o gojang-linux ./app/cmd/web
 
 # Build for macOS
-GOOS=darwin GOARCH=amd64 go build -o gojang-macos ./gojang/cmd/web
+GOOS=darwin GOARCH=amd64 go build -o gojang-macos ./app/cmd/web
 
 # Build for Windows
-GOOS=windows GOARCH=amd64 go build -o gojang-windows.exe ./gojang/cmd/web
+GOOS=windows GOARCH=amd64 go build -o gojang-windows.exe ./app/cmd/web
 
 # Build for ARM (Raspberry Pi, etc.)
-GOOS=linux GOARCH=arm64 go build -o gojang-arm ./gojang/cmd/web
+GOOS=linux GOARCH=arm64 go build -o gojang-arm ./app/cmd/web
 ```
 
 ### Using Task for Builds
@@ -85,7 +85,7 @@ GOOS=linux GOARCH=arm64 go build -o gojang-arm ./gojang/cmd/web
 task build
 
 # This runs:
-# go build -o app -ldflags="-s -w" ./gojang/cmd/web
+# go build -o app -ldflags="-s -w" ./app/cmd/web
 ```
 
 ---
@@ -140,7 +140,7 @@ go run -c 'import "crypto/rand"; import "encoding/base64"; b := make([]byte, 32)
 ### Environment-Specific Config
 
 ```go
-// gojang/config/config.go
+// app/gojang/config/config.go
 func Load() (*Config, error) {
     cfg := &Config{
         Port:  getEnv("PORT", "8080"),
@@ -196,7 +196,7 @@ COPY . .
 # Build binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o gojang-app \
     -ldflags="-s -w" \
-    ./gojang/cmd/web
+    ./app/cmd/web
 
 # Stage 2: Run
 FROM alpine:latest
@@ -214,8 +214,7 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/gojang-app .
 
-# Copy templates and static files
-COPY --from=builder /app/gojang/views ./gojang/views
+# Templates, static assets, i18n files, and migrations are embedded in the binary.
 
 # Change ownership
 RUN chown -R gojang:gojang /app
@@ -451,7 +450,7 @@ cd /opt/gojang
 
 # Or clone and build on server
 git clone https://github.com/yourusername/your-gojang-app.git .
-go build -o gojang-app ./gojang/cmd/web
+go build -o gojang-app ./app/cmd/web
 
 # Create .env file
 nano .env
@@ -618,12 +617,7 @@ server {
         proxy_buffering off;
     }
     
-    # Static files (optional - if serving directly)
-    location /static/ {
-        alias /opt/gojang/gojang/views/static/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+    # Static files are served by the Go app from embedded assets.
 }
 ```
 
@@ -812,7 +806,7 @@ services:
     repo: your-username/your-repo
     branch: main
     deploy_on_push: true
-  build_command: go build -o app ./gojang/cmd/web
+  build_command: go build -o app ./app/cmd/web
   run_command: ./app
   environment_slug: go
   instance_count: 1
@@ -861,7 +855,7 @@ if err := client.Schema.Create(ctx); err != nil {
 
 ```bash
 # Generate migration files
-cd gojang/models
+go generate ./app/gojang/models
 go run -mod=mod entgo.io/ent/cmd/ent generate ./schema
 
 # Create migration SQL
@@ -880,7 +874,7 @@ curl -sSf https://atlasgo.sh | sh
 
 # Generate migration
 atlas migrate diff initial \
-  --to "ent://gojang/models/schema" \
+  --to "ent://app/gojang/models/schema" \
   --dev-url "sqlite://dev.db"
 
 # Apply migration
@@ -1265,7 +1259,7 @@ sessionManager.Store = redisstore.New(pool)
 
 ```bash
 # Build
-go build -o app -ldflags="-s -w" ./gojang/cmd/web
+go build -o app -ldflags="-s -w" ./app/cmd/web
 
 # Docker
 docker build -t gojang-app .

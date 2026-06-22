@@ -23,7 +23,7 @@ Default settings for login and registration:
 - **Calculation**: One request every 12 seconds on average
 
 ```go
-// Located in: gojang/http/middleware/ratelimit.go
+// Located in: app/gojang/http/middleware/ratelimit.go
 func AuthRateLimiter() *IPRateLimiter {
     return NewIPRateLimiter(rate.Every(12*time.Second), 10)
 }
@@ -144,14 +144,14 @@ Log fields:
 
 ## Testing
 
-Comprehensive tests are available in `gojang/http/middleware/ratelimit_test.go`:
+Comprehensive tests are available in `app/gojang/http/middleware/ratelimit_test.go`:
 
 ```bash
 # Run all rate limit tests
-go test ./gojang/http/middleware -v -run RateLimit
+go test ./app/gojang/http/middleware -v -run RateLimit
 
 # Run specific test
-go test ./gojang/http/middleware -v -run TestRateLimit_BlocksExcessRequests
+go test ./app/gojang/http/middleware -v -run TestRateLimit_BlocksExcessRequests
 ```
 
 Test coverage includes:

@@ -2,7 +2,7 @@
 
 This comprehensive guide shows you how to add a complete data model to your Gojang application, including database schema, CRUD operations, and admin panel integration.
 
-> **🎉 Updated October 2025:** The admin panel now uses reflection for automatic CRUD operations!  
+> **🎉 Updated October 2025:** The admin panel now uses reflection for automatic CRUD operations!
 > No more manual switch statements in `registry.go` - just register your model and it works automatically.
 
 ## Overview
@@ -19,17 +19,17 @@ Adding a new data model involves these steps:
 
 ---
 
-## Example: Creating a "SampleProduct" Model
+## Example: Creating a "Product" Model
 
-Let's build a complete SampleProduct catalog feature with full CRUD capabilities.
+Let's build a complete Product catalog feature with full CRUD capabilities.
 
 ---
 
 ## Step 1: Define the Ent Schema
 
-Ent is the ORM used by Gojang. Schemas are defined in `gojang/models/schema/`.
+Ent is the ORM used by Gojang. Schemas are defined in `app/gojang/models/schema/`.
 
-### Create `gojang/models/schema/sampleproduct.go`
+### Create `app/gojang/models/schema/product.go`
 
 ```go
 package schema
@@ -42,56 +42,56 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
-// SampleProduct holds the schema definition for the SampleProduct entity.
-type SampleProduct struct {
+// Product holds the schema definition for the Product entity.
+type Product struct {
 	ent.Schema
 }
 
-// Fields of the SampleProduct.
-func (SampleProduct) Fields() []ent.Field {
+// Fields of the Product.
+func (Product) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
 			NotEmpty().
 			MaxLen(200),
-		
+
 		field.Text("description").
 			Optional(),
-		
+
 		field.Float("price").
 			Positive().
 			Comment("Price in USD"),
-		
+
 		field.Int("stock").
 			Default(0).
 			NonNegative().
 			Comment("Current inventory count"),
-		
+
 		field.String("sku").
 			Unique().
 			NotEmpty().
 			MaxLen(100).
 			Comment("Stock Keeping Unit"),
-		
+
 		field.Bool("is_active").
 			Default(true).
 			Comment("Whether product is visible to customers"),
-		
+
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
-		
+
 		field.Time("updated_at").
 			Default(time.Now).
 			UpdateDefault(time.Now),
 	}
 }
 
-// Edges of the SampleProduct (relationships).
-func (SampleProduct) Edges() []ent.Edge {
+// Edges of the Product (relationships).
+func (Product) Edges() []ent.Edge {
 	return []ent.Edge{
-		// SampleProduct belongs to a User (creator)
+		// Product belongs to a User (creator)
 		edge.From("creator", User.Type).
-			Ref("sample_sampleproducts").
+			Ref("products").
 			Unique().
 			Required(),
 	}
@@ -100,14 +100,14 @@ func (SampleProduct) Edges() []ent.Edge {
 
 ### Update User Schema to Add Relationship
 
-Edit `gojang/models/schema/user.go` and add the sample_sampleproducts edge:
+Edit `app/gojang/models/schema/user.go` and add the products edge:
 
 ```go
 // Edges of the User.
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("posts", Post.Type),
-		edge.To("sample_sampleproducts", SampleSampleProduct.Type),  // ✅ Add this line
+		edge.To("products", Product.Type),  // ✅ Add this line
 	}
 }
 ```
@@ -151,24 +151,23 @@ field.String("password_hash").Sensitive()
 ### Generate Ent Code
 
 ```bash
-cd gojang/models
-go generate ./...
+go generate ./app/gojang/models
 ```
 
 This creates:
-- ✅ `sampleproduct.go` - The SampleProduct model
-- ✅ `sampleproduct_create.go` - Create builder
-- ✅ `sampleproduct_update.go` - Update builder
-- ✅ `sampleproduct_query.go` - Query builder
-- ✅ `sampleproduct_delete.go` - Delete builder
-- ✅ `sampleproduct/sampleproduct.go` - Predicates and constants
+- ✅ `product.go` - The Product model
+- ✅ `product_create.go` - Create builder
+- ✅ `product_update.go` - Update builder
+- ✅ `product_query.go` - Query builder
+- ✅ `product_delete.go` - Delete builder
+- ✅ `product/product.go` - Predicates and constants
 
 ### Run Auto-Migration
 
 The application automatically migrates on startup, but you can also run migrations manually:
 
 ```bash
-go run ./gojang/cmd/web
+go run ./app/cmd/web
 ```
 
 Look for the migration log:
@@ -182,11 +181,11 @@ If you need more control, create a migration file:
 
 ```bash
 # Create migrations directory if it doesn't exist
-mkdir -p gojang/models/migrations
+mkdir -p app/gojang/models/migrations
 
 # Create migration file
-cat > gojang/models/migrations/000003_create_sample_sampleproducts.up.sql << EOF
-CREATE TABLE sample_sampleproducts (
+cat > app/gojang/models/migrations/000003_create_products.up.sql << EOF
+CREATE TABLE products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(200) NOT NULL,
     description TEXT,
@@ -200,13 +199,13 @@ CREATE TABLE sample_sampleproducts (
     FOREIGN KEY (creator_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_sample_sampleproducts_sku ON sample_sampleproducts(sku);
-CREATE INDEX idx_sample_sampleproducts_creator ON sample_sampleproducts(creator_id);
+CREATE INDEX idx_products_sku ON products(sku);
+CREATE INDEX idx_products_creator ON products(creator_id);
 EOF
 
 # Create down migration
-cat > gojang/models/migrations/000003_create_sample_sampleproducts.down.sql << EOF
-DROP TABLE sample_sampleproducts;
+cat > app/gojang/models/migrations/000003_create_products.down.sql << EOF
+DROP TABLE products;
 EOF
 ```
 
@@ -214,13 +213,13 @@ EOF
 
 ## Step 3: Create Form Validation Structs
 
-Forms are defined in `gojang/views/forms/forms.go`.
+Forms are defined in `app/views/forms/forms.go`.
 
-### Add to `gojang/views/forms/forms.go`
+### Add to `app/views/forms/forms.go`
 
 ```go
-// SampleProductForm is used for creating/editing sample sampleproducts
-type SampleProductForm struct {
+// ProductForm is used for creating/editing products
+type ProductForm struct {
 	Name        string  `form:"name" validate:"required,max=200"`
 	Description string  `form:"description"`
 	Price       float64 `form:"price" validate:"required,gt=0"`
@@ -247,12 +246,12 @@ validate:"alphanum"              // Only letters and numbers
 
 ## Step 4: Create Handlers
 
-Handlers are located in `gojang/http/handlers/`. Create a new file for your model.
+Feature handlers live with their feature package. Create a package under `app/products/` for the Product handler, routes, and templates.
 
-### Create `gojang/http/handlers/samplesampleproducts.go`
+### Create `app/products/products.handler.go`
 
 ```go
-package handlers
+package products
 
 import (
 	"context"
@@ -261,70 +260,70 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/http/middleware"
-	"github.com/gojangframework/gojang/gojang/models"
-	"github.com/gojangframework/gojang/gojang/views/forms"
-	"github.com/gojangframework/gojang/gojang/views/renderers"
+	"github.com/gojangframework/gojang/app/gojang/http/middleware"
+	"github.com/gojangframework/gojang/app/gojang/models"
+	"github.com/gojangframework/gojang/app/views/forms"
+	"github.com/gojangframework/gojang/app/gojang/views/renderers"
 )
 
-type SampleSampleProductHandler struct {
+type ProductHandler struct {
 	Client   *models.Client
 	Renderer *renderers.Renderer
 }
 
-func NewSampleSampleProductHandler(client *models.Client, renderer *renderers.Renderer) *SampleSampleProductHandler {
-	return &SampleSampleProductHandler{
+func NewProductHandler(client *models.Client, renderer *renderers.Renderer) *ProductHandler {
+	return &ProductHandler{
 		Client:   client,
 		Renderer: renderer,
 	}
 }
 
-// Index lists all sample sampleproducts
-func (h *SampleSampleProductHandler) Index(w http.ResponseWriter, r *http.Request) {
-	samplesampleproducts, err := h.Client.SampleProduct.Query().
+// Index lists all products
+func (h *ProductHandler) Index(w http.ResponseWriter, r *http.Request) {
+	products, err := h.Client.Product.Query().
 		WithCreator(). // Eager load creator
 		Order(models.Desc("created_at")).
 		All(r.Context())
-	
+
 	if err != nil {
-		log.Printf("Error loading sampleproducts: %v", err)
-		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load sampleproducts")
+		log.Printf("Error loading products: %v", err)
+		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to load products")
 		return
 	}
 
-	h.Renderer.Render(w, r, "sampleproducts/index.html", &renderers.TemplateData{
-		Title: "Sample Products",
+	h.Renderer.Render(w, r, "products/index.html", &renderers.TemplateData{
+		Title: "Products",
 		Data: map[string]interface{}{
-			"Sample Products": sampleproducts,
+			"Products": products,
 		},
 	})
 }
 
 // New shows the create form
-func (h *SampleProductHandler) New(w http.ResponseWriter, r *http.Request) {
-	h.Renderer.Render(w, r, "sampleproducts/new.partial.html", &renderers.TemplateData{
-		Title: "New Sample Product",
+func (h *ProductHandler) New(w http.ResponseWriter, r *http.Request) {
+	h.Renderer.Render(w, r, "products/new.partial.html", &renderers.TemplateData{
+		Title: "New Product",
 		Data:  map[string]interface{}{},
 	})
 }
 
 // Create handles product creation
-func (h *SampleProductHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
 	// Parse and validate form
-	var form forms.SampleProductForm
+	var form forms.ProductForm
 	if err := forms.Decode(r, &form); err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := forms.Validate(r.Context(), &form); err != nil {
-		h.Renderer.Render(w, r, "sampleproducts/new.partial.html", &renderers.TemplateData{
-			Title: "New Sample Product",
+		h.Renderer.Render(w, r, "products/new.partial.html", &renderers.TemplateData{
+			Title: "New Product",
 			Data: map[string]interface{}{
 				"Errors": err,
 				"Form":   form,
@@ -334,10 +333,10 @@ func (h *SampleProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current user from context
-	user, _ := middleware.GetUserFromContext(r.Context())
+	user := middleware.GetUser(r.Context())
 
-	// Create sample product
-	sampleproduct, err := h.Client.SampleProduct.Create().
+	// Create product
+	product, err := h.Client.Product.Create().
 		SetName(form.Name).
 		SetDescription(form.Description).
 		SetPrice(form.Price).
@@ -348,41 +347,41 @@ func (h *SampleProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Save(r.Context())
 
 	if err != nil {
-		log.Printf("Error creating sample product: %v", err)
-		h.Renderer.Render(w, r, "sampleproducts/new.partial.html", &renderers.TemplateData{
-			Title: "New Sample Product",
+		log.Printf("Error creating product: %v", err)
+		h.Renderer.Render(w, r, "products/new.partial.html", &renderers.TemplateData{
+			Title: "New Product",
 			Data: map[string]interface{}{
-				"Error": "Failed to create sample product",
+				"Error": "Failed to create product",
 				"Form":  form,
 			},
 		})
 		return
 	}
 
-	// Redirect to sample product list with success message
-	http.Redirect(w, r, "/sampleproducts", http.StatusSeeOther)
+	// Redirect to product list with success message
+	http.Redirect(w, r, "/products", http.StatusSeeOther)
 }
 
 // Edit shows the edit form
-func (h *SampleProductHandler) Edit(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 
-	sampleproduct, err := h.Client.SampleProduct.Get(r.Context(), id)
+	product, err := h.Client.Product.Get(r.Context(), id)
 	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Sample product not found")
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Product not found")
 		return
 	}
 
-	h.Renderer.Render(w, r, "sampleproducts/edit.partial.html", &renderers.TemplateData{
-		Title: "Edit Sample Product",
+	h.Renderer.Render(w, r, "products/edit.partial.html", &renderers.TemplateData{
+		Title: "Edit Product",
 		Data: map[string]interface{}{
-			"SampleProduct": sampleproduct,
+			"Product": product,
 		},
 	})
 }
 
 // Update handles product updates
-func (h *SampleProductHandler) Update(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if err := r.ParseForm(); err != nil {
@@ -390,27 +389,27 @@ func (h *SampleProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var form forms.SampleProductForm
+	var form forms.ProductForm
 	if err := forms.Decode(r, &form); err != nil {
 		h.Renderer.RenderError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := forms.Validate(r.Context(), &form); err != nil {
-		product, _ := h.Client.SampleProduct.Get(r.Context(), id)
-		h.Renderer.Render(w, r, "sampleproducts/edit.partial.html", &renderers.TemplateData{
-			Title: "Edit Sample Product",
+		product, _ := h.Client.Product.Get(r.Context(), id)
+		h.Renderer.Render(w, r, "products/edit.partial.html", &renderers.TemplateData{
+			Title: "Edit Product",
 			Data: map[string]interface{}{
 				"Errors":  err,
-				"SampleProduct": sampleproduct,
+				"Product": product,
 				"Form":    form,
 			},
 		})
 		return
 	}
 
-	// Update sample product
-	_, err := h.Client.SampleProduct.UpdateOneID(id).
+	// Update product
+	_, err := h.Client.Product.UpdateOneID(id).
 		SetName(form.Name).
 		SetDescription(form.Description).
 		SetPrice(form.Price).
@@ -420,32 +419,32 @@ func (h *SampleProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Save(r.Context())
 
 	if err != nil {
-		log.Printf("Error updating sample product: %v", err)
-		product, _ := h.Client.SampleProduct.Get(r.Context(), id)
-		h.Renderer.Render(w, r, "sampleproducts/edit.partial.html", &renderers.TemplateData{
-			Title: "Edit Sample Product",
+		log.Printf("Error updating product: %v", err)
+		product, _ := h.Client.Product.Get(r.Context(), id)
+		h.Renderer.Render(w, r, "products/edit.partial.html", &renderers.TemplateData{
+			Title: "Edit Product",
 			Data: map[string]interface{}{
-				"Error":   "Failed to update sample product",
-				"SampleProduct": sampleproduct,
+				"Error":   "Failed to update product",
+				"Product": product,
 			},
 		})
 		return
 	}
 
-	http.Redirect(w, r, "/sampleproducts", http.StatusSeeOther)
+	http.Redirect(w, r, "/products", http.StatusSeeOther)
 }
 
 // Delete handles product deletion
-func (h *SampleProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 
-	if err := h.Client.SampleProduct.DeleteOneID(id).Exec(r.Context()); err != nil {
+	if err := h.Client.Product.DeleteOneID(id).Exec(r.Context()); err != nil {
 		log.Printf("Error deleting product: %v", err)
 		h.Renderer.RenderError(w, r, http.StatusInternalServerError, "Failed to delete product")
 		return
 	}
 
-	http.Redirect(w, r, "/sampleproducts", http.StatusSeeOther)
+	http.Redirect(w, r, "/products", http.StatusSeeOther)
 }
 ```
 
@@ -455,82 +454,88 @@ func (h *SampleProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 Routes are organized by feature. Create a new route file.
 
-### Create `gojang/http/routes/sampleproducts.go`
+### Create `app/products/products.route.go`
 
 ```go
-package routes
+package products
 
 import (
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
-	"github.com/gojangframework/gojang/gojang/http/handlers"
-	"github.com/gojangframework/gojang/gojang/http/middleware"
+
+	"github.com/gojangframework/gojang/app/gojang/http/middleware"
+	"github.com/gojangframework/gojang/app/gojang/models"
 )
 
-// RegisterSampleProductRoutes registers all product-related routes
-func RegisterSampleProductRoutes(r chi.Router, handler *handlers.SampleProductHandler) {
-	r.Route("/sampleproducts", func(r chi.Router) {
-		// Public routes (anyone can view)
-		r.Get("/", handler.Index)
+func ProductRoutes(handler *ProductHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
+	r := chi.NewRouter()
 
-		// Protected routes (require authentication)
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequireAuth)
+	// Public routes (anyone can view)
+	r.Get("/", handler.Index)
 
-			r.Get("/new", handler.New)
-			r.Post("/", handler.Create)
-			r.Get("/{id}/edit", handler.Edit)
-			r.Put("/{id}", handler.Update)
-			r.Delete("/{id}", handler.Delete)
-		})
+	// Protected routes (require authentication)
+	r.Group(func(auth chi.Router) {
+		auth.Use(middleware.RequireAuth(sm, client))
+
+		auth.Get("/new", handler.New)
+		auth.Post("/", handler.Create)
+		auth.Get("/{id}/edit", handler.Edit)
+		auth.Put("/{id}", handler.Update)
+		auth.Delete("/{id}", handler.Delete)
 	})
+
+	return r
 }
 ```
 
 ### Register Routes in Main Application
 
-Edit `gojang/cmd/web/main.go` and add your routes:
+Edit `app/cmd/web/main.go` and add your routes:
 
 ```go
+// Add this import:
+// "github.com/gojangframework/gojang/app/products"
+
 // Find the route registration section and add:
-sampleProductHandler := handlers.NewSampleProductHandler(client, renderer)
-routes.RegisterSampleProductRoutes(router, sampleProductHandler)
+productHandler := products.NewProductHandler(client, publicRenderer)
+r.Mount("/products", products.ProductRoutes(productHandler, sessionManager, client))
 ```
 
 ---
 
 ## Step 6: Create Templates
 
-Templates are located in `gojang/views/templates/`. Create a new directory for your model.
+Templates are located in `app/views/templates/`. Create a new directory for your model.
 
 ### Create Directory Structure
 
 ```bash
-mkdir -p gojang/views/templates/sampleproducts
+mkdir -p app/products/templates
 ```
 
-### Create `gojang/views/templates/sampleproducts/index.html`
+### Create `app/products/templates/index.html`
 
 ```html
-{{define "title"}}Sample Products{{end}}
+{{define "title"}}Products{{end}}
 
 {{define "content"}}
 <div class="container">
     <div class="page-header">
-        <h1>Sample Products</h1>
+        <h1>Products</h1>
         {{if .User}}
-        <a href="/sampleproducts/new" class="btn btn-primary">
-            + New Sample Product
+        <a href="/products/new" class="btn btn-primary">
+            + New Product
         </a>
         {{end}}
     </div>
 
-    {{if .Data.SampleProducts}}
+    {{if .Data.Products}}
     <div class="product-grid">
-        {{range .Data.SampleProducts}}
+        {{range .Data.Products}}
         <div class="card">
             <h2>{{.Name}}</h2>
             <p>{{.Description}}</p>
-            
+
             <div class="product-details">
                 <span class="price">${{printf "%.2f" .Price}}</span>
                 <span class="badge {{if gt .Stock 0}}badge-success{{else}}badge-danger{{end}}">
@@ -541,21 +546,21 @@ mkdir -p gojang/views/templates/sampleproducts
                     {{end}}
                 </span>
             </div>
-            
+
             <div class="product-meta">
                 SKU: {{.SKU}}<br>
                 Created by: {{.Edges.Creator.Email}}<br>
                 {{.CreatedAt.Format "Jan 2, 2006"}}
             </div>
-            
+
             {{if $.User}}
             <div class="actions">
-                <a href="/sampleproducts/{{.ID}}/edit" class="btn btn-primary btn-sm">
+                <a href="/products/{{.ID}}/edit" class="btn btn-primary btn-sm">
                     Edit
                 </a>
-                <form method="POST" action="/sampleproducts/{{.ID}}" style="display: inline;">
+                <form method="POST" action="/products/{{.ID}}" style="display: inline;">
                     <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" 
+                    <button type="submit"
                             onclick="return confirm('Are you sure?')"
                             class="btn btn-danger btn-sm">
                         Delete
@@ -568,9 +573,9 @@ mkdir -p gojang/views/templates/sampleproducts
     </div>
     {{else}}
     <div class="card" style="text-align: center;">
-        <p>No sampleproducts found</p>
+        <p>No products found</p>
         {{if .User}}
-        <a href="/sampleproducts/new" class="btn btn-primary">
+        <a href="/products/new" class="btn btn-primary">
             Create your first product →
         </a>
         {{end}}
@@ -604,14 +609,14 @@ mkdir -p gojang/views/templates/sampleproducts
 {{end}}
 ```
 
-### Create `gojang/views/templates/sampleproducts/new.partial.html`
+### Create `app/products/templates/new.partial.html`
 
 ```html
-{{define "title"}}New Sample Product{{end}}
+{{define "title"}}New Product{{end}}
 
 {{define "content"}}
 <div class="container">
-    <h1>New Sample Product</h1>
+    <h1>New Product</h1>
 
     {{if .Data.Error}}
     <div class="alert alert-error">
@@ -619,12 +624,12 @@ mkdir -p gojang/views/templates/sampleproducts
     </div>
     {{end}}
 
-    <form method="POST" action="/sampleproducts" class="form">
+    <form method="POST" action="/products" class="form">
         <div class="form-group">
-            <label for="name">Sample Product Name *</label>
-            <input type="text" 
-                   id="name" 
-                   name="name" 
+            <label for="name">Product Name *</label>
+            <input type="text"
+                   id="name"
+                   name="name"
                    value="{{if .Data.Form}}{{.Data.Form.Name}}{{end}}"
                    required>
             {{if .Data.Errors}}
@@ -636,17 +641,17 @@ mkdir -p gojang/views/templates/sampleproducts
 
         <div class="form-group">
             <label for="description">Description</label>
-            <textarea id="description" 
-                      name="description" 
+            <textarea id="description"
+                      name="description"
                       rows="4">{{if .Data.Form}}{{.Data.Form.Description}}{{end}}</textarea>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label for="price">Price ($) *</label>
-                <input type="number" 
-                       id="price" 
-                       name="price" 
+                <input type="number"
+                       id="price"
+                       name="price"
                        step="0.01"
                        min="0"
                        value="{{if .Data.Form}}{{.Data.Form.Price}}{{end}}"
@@ -660,9 +665,9 @@ mkdir -p gojang/views/templates/sampleproducts
 
             <div class="form-group">
                 <label for="stock">Stock</label>
-                <input type="number" 
-                       id="stock" 
-                       name="stock" 
+                <input type="number"
+                       id="stock"
+                       name="stock"
                        min="0"
                        value="{{if .Data.Form}}{{.Data.Form.Stock}}{{else}}0{{end}}">
             </div>
@@ -670,9 +675,9 @@ mkdir -p gojang/views/templates/sampleproducts
 
         <div class="form-group">
             <label for="sku">SKU *</label>
-            <input type="text" 
-                   id="sku" 
-                   name="sku" 
+            <input type="text"
+                   id="sku"
+                   name="sku"
                    value="{{if .Data.Form}}{{.Data.Form.SKU}}{{end}}"
                    required>
             {{if .Data.Errors}}
@@ -684,8 +689,8 @@ mkdir -p gojang/views/templates/sampleproducts
 
         <div class="form-group">
             <label class="checkbox">
-                <input type="checkbox" 
-                       name="is_active" 
+                <input type="checkbox"
+                       name="is_active"
                        value="true"
                        {{if or (not .Data.Form) .Data.Form.IsActive}}checked{{end}}>
                 Active (visible to customers)
@@ -694,9 +699,9 @@ mkdir -p gojang/views/templates/sampleproducts
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
-                Create Sample Product
+                Create Product
             </button>
-            <a href="/sampleproducts" class="btn btn-secondary">
+            <a href="/products" class="btn btn-secondary">
                 Cancel
             </a>
         </div>
@@ -721,14 +726,14 @@ mkdir -p gojang/views/templates/sampleproducts
 {{end}}
 ```
 
-### Create `gojang/views/templates/sampleproducts/edit.partial.html`
+### Create `app/products/templates/edit.partial.html`
 
 ```html
-{{define "title"}}Edit Sample Product{{end}}
+{{define "title"}}Edit Product{{end}}
 
 {{define "content"}}
 <div class="max-w-2xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">Edit Sample Product</h1>
+    <h1 class="text-3xl font-bold mb-6">Edit Product</h1>
 
     {{if .Data.Error}}
     <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
@@ -736,31 +741,31 @@ mkdir -p gojang/views/templates/sampleproducts
     </div>
     {{end}}
 
-    <form method="POST" action="/sampleproducts/{{.Data.SampleProduct.ID}}" class="bg-white shadow-md rounded-lg p-6">
+    <form method="POST" action="/products/{{.Data.Product.ID}}" class="bg-white shadow-md rounded-lg p-6">
         <input type="hidden" name="_method" value="PUT">
-        
-        <!-- Same form fields as new.partial.html, but with SampleProduct data -->
+
+        <!-- Same form fields as new.partial.html, but with Product data -->
         <div class="mb-4">
             <label for="name" class="block text-gray-700 font-bold mb-2">
-                Sample Product Name *
+                Product Name *
             </label>
-            <input type="text" 
-                   id="name" 
-                   name="name" 
-                   value="{{if .Data.Form}}{{.Data.Form.Name}}{{else}}{{.Data.SampleProduct.Name}}{{end}}"
+            <input type="text"
+                   id="name"
+                   name="name"
+                   value="{{if .Data.Form}}{{.Data.Form.Name}}{{else}}{{.Data.Product.Name}}{{end}}"
                    required
                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
         <!-- ... rest of form fields ... -->
-        <!-- (Copy from new.partial.html and replace .Data.Form with .Data.SampleProduct) -->
+        <!-- (Copy from new.partial.html and replace .Data.Form with .Data.Product) -->
 
         <div class="flex space-x-4">
-            <button type="submit" 
+            <button type="submit"
                     class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                Update Sample Product
+                Update Product
             </button>
-            <a href="/sampleproducts" 
+            <a href="/products"
                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded text-center">
                 Cancel
             </a>
@@ -776,7 +781,7 @@ mkdir -p gojang/views/templates/sampleproducts
 
 The admin panel provides automatic CRUD interface for your models.
 
-### Add to `gojang/admin/models.go`
+### Add to `app/gojang/admin/models.go`
 
 ```go
 func RegisterModels(registry *Registry) {
@@ -792,14 +797,14 @@ func RegisterModels(registry *Registry) {
 		// ... existing config ...
 	})
 
-	// ✅ Add SampleProduct model
+	// ✅ Add Product model
 	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.SampleProduct{},
+		ModelType:      &models.Product{},
 		Icon:           "📦",
-		NamePlural:     "Sample Products",
+		NamePlural:     "Products",
 		ListFields:     []string{"ID", "Name", "Price", "Stock", "SKU", "IsActive"},
 		ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
-		
+
 		// Eager load creator relationship
 		QueryModifier: func(ctx context.Context, query interface{}) interface{} {
 			if q, ok := query.(*models.ProductQuery); ok {
@@ -818,18 +823,18 @@ func RegisterModels(registry *Registry) {
 ### 1. Restart the Server
 
 ```bash
-go run ./gojang/cmd/web
+go run ./app/cmd/web
 ```
 
 ### 2. Test Public Routes
 
-- Visit http://localhost:8080/sampleproducts
-- Should see empty state or list of sampleproducts
+- Visit http://localhost:8080/products
+- Should see empty state or list of products
 
 ### 3. Test CRUD Operations
 
-1. **Create:** http://localhost:8080/sampleproducts/new
-2. **List:** http://localhost:8080/sampleproducts
+1. **Create:** http://localhost:8080/products/new
+2. **List:** http://localhost:8080/products
 3. **Edit:** Click "Edit" button
 4. **Delete:** Click "Delete" button
 
@@ -837,7 +842,7 @@ go run ./gojang/cmd/web
 
 1. Visit http://localhost:8080/admin
 2. Should see "Products 📦" in sidebar
-3. Click to manage sampleproducts via admin interface
+3. Click to manage products via the admin workspace, or visit http://localhost:8080/admin/t/product directly
 
 ---
 
@@ -846,11 +851,11 @@ go run ./gojang/cmd/web
 ### Adding Search/Filter
 
 ```go
-func (h *SampleProductHandler) Index(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Index(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
-	
-	productQuery := h.Client.SampleProduct.Query().WithCreator()
-	
+
+	productQuery := h.Client.Product.Query().WithCreator()
+
 	if query != "" {
 		productQuery = productQuery.Where(
 			models.Or(
@@ -859,8 +864,8 @@ func (h *SampleProductHandler) Index(w http.ResponseWriter, r *http.Request) {
 			),
 		)
 	}
-	
-	sampleproducts, err := productQuery.All(r.Context())
+
+	products, err := productQuery.All(r.Context())
 	// ... rest of handler
 }
 ```
@@ -875,13 +880,13 @@ if page < 1 {
 limit := 20
 offset := (page - 1) * limit
 
-sampleproducts, err := h.Client.SampleProduct.Query().
+products, err := h.Client.Product.Query().
 	WithCreator().
 	Limit(limit).
 	Offset(offset).
 	All(r.Context())
 
-count, _ := h.Client.SampleProduct.Query().Count(r.Context())
+count, _ := h.Client.Product.Query().Count(r.Context())
 totalPages := (count + limit - 1) / limit
 ```
 
@@ -912,7 +917,7 @@ if err == nil {
 field.Time("deleted_at").Optional().Nillable()
 
 // In handler
-_, err := h.Client.SampleProduct.UpdateOneID(id).
+_, err := h.Client.Product.UpdateOneID(id).
 	SetDeletedAt(time.Now()).
 	Save(r.Context())
 ```
@@ -923,16 +928,16 @@ _, err := h.Client.SampleProduct.UpdateOneID(id).
 
 When adding a new model, use this checklist:
 
-- [ ] Create Ent schema in `gojang/models/schema/`
+- [ ] Create Ent schema in `app/gojang/models/schema/`
 - [ ] Add relationships to related schemas
-- [ ] Run `go generate ./...` in models directory
-- [ ] Create form struct in `gojang/views/forms/forms.go`
-- [ ] Create handler in `gojang/http/handlers/`
-- [ ] Create routes in `gojang/http/routes/`
-- [ ] Register routes in `gojang/cmd/web/main.go`
-- [ ] Create templates in `gojang/views/templates/[model]/`
-- [ ] Register with admin panel in `gojang/admin/models.go`
-- [ ] ~~Add case statements in `gojang/admin/registry.go`~~ ✅ **No longer needed!**
+- [ ] Run `go generate ./app/gojang/models` in models directory
+- [ ] Create form struct in `app/views/forms/forms.go`
+- [ ] Create handler in `app/products/products.handler.go`
+- [ ] Create routes in `app/products/products.route.go`
+- [ ] Register routes in `app/cmd/web/main.go`
+- [ ] Create templates in `app/products/templates/`
+- [ ] Register with admin panel in `app/gojang/admin/models.go`
+- [ ] ~~Add case statements in `app/gojang/admin/registry.go`~~ ✅ **No longer needed!**
 - [ ] Test CRUD operations
 - [ ] Test admin panel integration
 - [ ] Add navigation links (optional)
@@ -946,9 +951,7 @@ When adding a new model, use this checklist:
 ### Build Errors After Schema Changes
 
 ```bash
-cd gojang/models
-rm -rf *.go
-go generate ./...
+go generate ./app/gojang/models
 ```
 
 ### Migration Fails
@@ -960,8 +963,8 @@ Check for:
 
 ### Handler Not Found
 
-- ✅ Check handler is created in `handlers/`
-- ✅ Check handler is registered in `main.go`
+- ✅ Check handler is created in `app/products/products.handler.go`
+- ✅ Check route is mounted in `app/cmd/web/main.go`
 - ✅ Restart server after changes
 
 ### Template Not Rendering
@@ -974,7 +977,7 @@ Check for:
 
 - ✅ Check model registered in `models.go`
 - ✅ ~~Check case statements added to all methods in `registry.go`~~ No longer needed!
-- ✅ Verify model name matches Ent client field (e.g., `client.SampleProduct`)
+- ✅ Verify model name matches Ent client field (e.g., `client.Product`)
 - ✅ Restart server
 
 ---
@@ -983,7 +986,7 @@ Check for:
 
 - ✅ **Read:** [Creating Static Pages](./creating-static-pages.md)
 - ✅ **Learn:** [HTMX Integration Patterns](./htmx-patterns.md)
-- ✅ **Explore:** Check existing models in `gojang/models/schema/` for more examples
+- ✅ **Explore:** Check existing models in `app/gojang/models/schema/` for more examples
 - ✅ **Advanced:** [Ent Documentation](https://entgo.io/docs/getting-started)
 
 ---
@@ -992,14 +995,14 @@ Check for:
 
 | Step | File | Action |
 |------|------|--------|
-| 1. Schema | `gojang/models/schema/model.go` | Define fields and edges |
-| 2. Generate | Terminal | `cd gojang/models && go generate ./...` |
-| 3. Form | `gojang/views/forms/forms.go` | Add validation struct |
-| 4. Handler | `gojang/http/handlers/model.go` | Create CRUD handlers |
-| 5. Routes | `gojang/http/routes/model.go` | Define URL patterns |
-| 6. Main | `gojang/cmd/web/main.go` | Register routes |
-| 7. Templates | `gojang/views/templates/model/` | Create HTML views |
-| 8. Admin | `gojang/admin/models.go` | Register model (auto CRUD!) |
-| ~~9. Registry~~ | ~~`gojang/admin/registry.go`~~ | ~~Add case statements~~ ✅ **Removed!** |
+| 1. Schema | `app/gojang/models/schema/model.go` | Define fields and edges |
+| 2. Generate | Terminal | `go generate ./app/gojang/models` |
+| 3. Form | `app/views/forms/forms.go` | Add validation struct |
+| 4. Handler | `app/products/products.handler.go` | Create CRUD handlers |
+| 5. Routes | `app/products/products.route.go` | Define URL patterns |
+| 6. Main | `app/cmd/web/main.go` | Register routes |
+| 7. Templates | `app/products/templates/` | Create HTML views |
+| 8. Admin | `app/gojang/admin/models.go` | Register model (auto CRUD!) |
+| ~~9. Registry~~ | ~~`app/gojang/admin/registry.go`~~ | ~~Add case statements~~ ✅ **Removed!** |
 
 ---

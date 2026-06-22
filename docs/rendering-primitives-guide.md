@@ -8,16 +8,16 @@ Rendering primitives help you keep templates consistent and reduce repeated view
 
 The Gojang renderer now supports:
 - Shared template functions for strings, math, ranges, dates, numbers, and JSON
-- Component templates loaded from `gojang/views/templates/components/`
+- Component templates loaded from `app/views/templates/components/`
 - Direct partial rendering without requiring an HTMX request header
 - Direct component rendering for reusable UI fragments
 - A generic table component with optional pagination
 
 **Key Files:**
-- `gojang/views/renderers/renderer.go` - Public renderer and primitive APIs
-- `gojang/views/templates/components/` - Shared component templates
-- `gojang/views/templates/components/table.html` - Generic table component
-- `gojang/views/renderers/renderer_test.go` - Renderer primitive tests
+- `app/gojang/views/renderers/renderer.go` - Public renderer and primitive APIs
+- `app/views/templates/components/` - Shared component templates
+- `app/views/templates/components/table.html` - Generic table component
+- `app/gojang/views/renderers/renderer_test.go` - Renderer primitive tests
 
 ---
 
@@ -181,7 +181,7 @@ This is useful for modal endpoints, preview endpoints, component refreshes, and 
 Component templates live in:
 
 ```text
-gojang/views/templates/components/
+app/views/templates/components/
 ```
 
 Each component should define a named template:
@@ -417,7 +417,7 @@ For visible output, format values explicitly with normal template expressions.
 **Problem:** `component template table not found`
 
 **Check:**
-- The component file is under `gojang/views/templates/components/`
+- The component file is under `app/views/templates/components/`
 - The file extension is `.html`
 - The component uses `{{define "component_name"}}`
 - The name passed to `RenderComponent` matches the defined name

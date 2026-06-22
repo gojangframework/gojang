@@ -14,10 +14,10 @@ Gojang includes a complete authentication and authorization system with:
 - 👮 Role-based permissions
 
 **Key Components:**
-- `gojang/http/handlers/auth.go` - Authentication handlers
-- `gojang/http/middleware/auth.go` - Authentication middleware
-- `gojang/http/security/password.go` - Password hashing utilities
-- `gojang/models/schema/user.go` - User model schema
+- `app/gojang/http/handlers/auth.go` - Authentication handlers
+- `app/gojang/http/middleware/auth.go` - Authentication middleware
+- `app/gojang/utils/password.go` - Password hashing utilities
+- `app/gojang/models/schema/user.go` - User model schema
 
 ---
 
@@ -28,7 +28,7 @@ Gojang includes a complete authentication and authorization system with:
 The User model includes all necessary fields for authentication:
 
 ```go
-// gojang/models/schema/user.go
+// app/gojang/models/schema/user.go
 type User struct {
     ent.Schema
 }
@@ -75,10 +75,10 @@ func (User) Fields() []ent.Field {
 Gojang uses bcrypt for password hashing with appropriate cost factor:
 
 ```go
-import "github.com/gojangframework/gojang/gojang/http/security"
+import "github.com/gojangframework/gojang/app/gojang/utils"
 
 // Hash a password
-hash, err := security.HashPassword("user-password")
+hash, err := utils.HashPassword("user-password")
 if err != nil {
     // Handle error
 }
@@ -92,7 +92,7 @@ user := client.User.Create().
 
 **Implementation details:**
 ```go
-// gojang/http/security/password.go
+// app/gojang/utils/password.go
 func HashPassword(password string) (string, error) {
     bytes, err := bcrypt.GenerateFromPassword(
         []byte(password), 
@@ -106,7 +106,7 @@ func HashPassword(password string) (string, error) {
 
 ```go
 // Check if password matches hash
-match, err := security.CheckPassword(user.PasswordHash, "user-password")
+match, err := utils.CheckPassword(user.PasswordHash, "user-password")
 if err != nil {
     // Handle error
 }
@@ -152,7 +152,7 @@ func CheckPassword(hash, password string) (bool, error) {
 Sessions are managed using [alexedwards/scs](https://github.com/alexedwards/scs):
 
 ```go
-// gojang/http/middleware/session.go
+// app/gojang/http/middleware/session.go
 func NewSessionManager(cfg *config.Config) *scs.SessionManager {
     sessionManager := scs.New()
     sessionManager.Lifetime = cfg.SessionLifetime  // Default: 24 hours
@@ -203,7 +203,7 @@ sessionManager.Destroy(ctx)
 ### Registration
 
 ```go
-// gojang/http/handlers/auth.go
+// app/gojang/http/handlers/auth.go
 func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
     // 1. Parse and validate form
     if err := r.ParseForm(); err != nil {
@@ -239,7 +239,7 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
     }
     
     // 4. Hash password
-    hash, err := security.HashPassword(password)
+    hash, err := utils.HashPassword(password)
     if err != nil {
         h.Renderer.RenderError(w, r, http.StatusInternalServerError, 
             "Failed to hash password")
@@ -304,7 +304,7 @@ func (h *AuthHandler) LoginPOST(w http.ResponseWriter, r *http.Request) {
     }
     
     // 3. Verify password
-    ok, err := security.CheckPassword(u.PasswordHash, password)
+    ok, err := utils.CheckPassword(u.PasswordHash, password)
     if err != nil || !ok {
         // Wrong password - return generic error
         h.Renderer.Render(w, r, "auth/login.html", &renderers.TemplateData{
@@ -396,7 +396,7 @@ func (h *AuthHandler) LogoutPOST(w http.ResponseWriter, r *http.Request) {
 Ensures user is logged in:
 
 ```go
-// gojang/http/middleware/auth.go
+// app/gojang/http/middleware/auth.go
 func RequireAuth(sm *scs.SessionManager, client *models.Client) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -512,13 +512,15 @@ func RequireStaff(next http.Handler) http.Handler {
 
 **Usage:**
 ```go
-// Chain with RequireAuth
+// The framework admin panel already chains RequireAuth and RequireStaff.
+r.Mount("/admin", admin.AdminRoutes(adminHandler, sessionManager, dbClient))
+
+// For custom staff-only app features, use a non-admin namespace.
 r.Group(func(r chi.Router) {
     r.Use(middleware.RequireAuth(sessionManager, dbClient))
     r.Use(middleware.RequireStaff)
-    
-    r.Get("/admin", handler.AdminPanel)
-    r.Get("/admin/users", handler.AdminUsers)
+
+    r.Get("/staff/reports", handler.StaffReports)
 })
 ```
 
@@ -598,15 +600,11 @@ r.Group(func(r chi.Router) {
 Staff/admin permission required:
 
 ```go
-r.Group(func(r chi.Router) {
-    r.Use(middleware.RequireAuth(sessionManager, dbClient))
-    r.Use(middleware.RequireStaff)
-    
-    // Admin-only routes
-    r.Get("/admin", handler.AdminPanel)
-    r.Get("/admin/users", handler.UserList)
-    r.Post("/admin/users/{id}/deactivate", handler.UserDeactivate)
-})
+// Framework admin routes.
+r.Mount("/admin", admin.AdminRoutes(adminHandler, sessionManager, dbClient))
+
+// Canonical workspace URLs are /admin/t/{resource}; legacy /admin/{model}
+// URLs redirect into the workspace.
 ```
 
 ### Mixed Routes
@@ -705,7 +703,7 @@ func (h *PostHandler) Edit(w http.ResponseWriter, r *http.Request) {
 Extend the User model with roles:
 
 ```go
-// gojang/models/schema/user.go
+// app/gojang/models/schema/user.go
 func (User) Fields() []ent.Field {
     return []ent.Field{
         // ... existing fields ...
@@ -760,7 +758,7 @@ r.Use(RequireRole("admin", "moderator"))
 
 1. **Always hash passwords** with bcrypt
    ```go
-   hash, _ := security.HashPassword(password)
+   hash, _ := utils.HashPassword(password)
    ```
 
 2. **Use HTTPS in production** (cookie Secure flag)
@@ -843,7 +841,7 @@ Test password hashing:
 func TestHashPassword(t *testing.T) {
     password := "testpassword123"
     
-    hash, err := security.HashPassword(password)
+    hash, err := utils.HashPassword(password)
     if err != nil {
         t.Fatalf("HashPassword failed: %v", err)
     }
@@ -852,7 +850,7 @@ func TestHashPassword(t *testing.T) {
         t.Error("Hash should not equal plaintext")
     }
     
-    match, err := security.CheckPassword(hash, password)
+    match, err := utils.CheckPassword(hash, password)
     if err != nil || !match {
         t.Error("Password verification failed")
     }
@@ -891,7 +889,7 @@ Test complete login flow:
 func TestLoginFlow(t *testing.T) {
     // 1. Register user
     password := "testpass123"
-    hash, _ := security.HashPassword(password)
+    hash, _ := utils.HashPassword(password)
     
     user, err := client.User.Create().
         SetEmail("test@example.com").
@@ -993,7 +991,7 @@ sessionManager.RenewToken(ctx)
 - ✅ **Secure:** Review security best practices
 - ✅ **Test:** Write tests for authentication flows
 - ✅ **Read:** [Deployment Guide](./deployment-guide.md) for production setup
-- ✅ **Explore:** Check `gojang/http/middleware/auth.go` for more details
+- ✅ **Explore:** Check `app/gojang/http/middleware/auth.go` for more details
 
 ---
 
@@ -1003,8 +1001,8 @@ sessionManager.RenewToken(ctx)
 
 ```go
 // Password hashing
-hash, err := security.HashPassword(password)
-match, err := security.CheckPassword(hash, password)
+hash, err := utils.HashPassword(password)
+match, err := utils.CheckPassword(hash, password)
 
 // Session management
 sessionManager.Put(ctx, "user_id", id)
@@ -1028,11 +1026,11 @@ r.Group(func(r chi.Router) {
     r.Get("/protected", handler.Protected)
 })
 
-// Admin route
+// Custom staff-only app route
 r.Group(func(r chi.Router) {
     r.Use(middleware.RequireAuth(sm, client))
     r.Use(middleware.RequireStaff)
-    r.Get("/admin", handler.Admin)
+    r.Get("/staff", handler.StaffDashboard)
 })
 ```
 

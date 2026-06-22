@@ -55,7 +55,7 @@ gojang/
 ### Basic Unit Test
 
 ```go
-// gojang/http/security/password_test.go
+// app/gojang/utils/password_test.go
 package security
 
 import (
@@ -192,20 +192,23 @@ func TestValidateEmail(t *testing.T) {
 ### Basic Handler Test
 
 ```go
-// gojang/http/handlers/pages_test.go
-package handlers
+// app/pages/pages.handler_test.go
+package pages
 
 import (
     "net/http"
     "net/http/httptest"
     "testing"
     
-    "github.com/gojangframework/gojang/gojang/views/renderers"
+    "github.com/gojangframework/gojang/app/gojang/views/renderers"
 )
 
 func TestPageHandler_About(t *testing.T) {
     // Setup
-    renderer := renderers.NewRenderer("../../views/templates")
+    renderer, err := renderers.NewRenderer(false)
+    if err != nil {
+        t.Fatalf("NewRenderer() error = %v", err)
+    }
     handler := &PageHandler{
         Renderer: renderer,
     }
@@ -341,7 +344,7 @@ func TestAuthHandler_LoginPOST(t *testing.T) {
 ### Setup Test Database
 
 ```go
-// gojang/models/testing.go
+// app/gojang/models/testing.go
 package models
 
 import (
@@ -383,7 +386,7 @@ func NewTestClient(t *testing.T) *Client {
 func CreateTestUser(t *testing.T, client *Client) *User {
     t.Helper()
     
-    hash, err := security.HashPassword("password123")
+    hash, err := utils.HashPassword("password123")
     if err != nil {
         t.Fatalf("Failed to hash password: %v", err)
     }
@@ -592,7 +595,10 @@ func TestUserRegistrationFlow(t *testing.T) {
     // Setup
     client := NewTestClient(t)
     sessionManager := scs.New()
-    renderer := renderers.NewRenderer("../../views/templates")
+    renderer, err := renderers.NewRenderer(false)
+    if err != nil {
+        t.Fatalf("NewRenderer() error = %v", err)
+    }
     
     handler := NewAuthHandler(client, sessionManager, renderer)
     
@@ -653,14 +659,14 @@ func TestUserRegistrationFlow(t *testing.T) {
 ### Reusable Test Setup
 
 ```go
-// gojang/http/handlers/testing.go
+// app/gojang/http/handlers/testing.go
 package handlers
 
 import (
     "testing"
     
-    "github.com/gojangframework/gojang/gojang/models"
-    "github.com/gojangframework/gojang/gojang/views/renderers"
+    "github.com/gojangframework/gojang/app/gojang/models"
+    "github.com/gojangframework/gojang/app/gojang/views/renderers"
     "github.com/alexedwards/scs/v2"
 )
 
@@ -678,8 +684,17 @@ func NewTestSetup(t *testing.T) *TestSetup {
     return &TestSetup{
         Client:         models.NewTestClient(t),
         SessionManager: scs.New(),
-        Renderer:       renderers.NewRenderer("../../views/templates"),
+        Renderer:       mustRenderer(t),
     }
+}
+
+func mustRenderer(t *testing.T) *renderers.Renderer {
+    t.Helper()
+    renderer, err := renderers.NewRenderer(false)
+    if err != nil {
+        t.Fatalf("NewRenderer() error = %v", err)
+    }
+    return renderer
 }
 
 // CreateAuthHandler creates an auth handler for testing
@@ -691,7 +706,7 @@ func (s *TestSetup) CreateAuthHandler() *AuthHandler {
 func (s *TestSetup) CreateTestUser(t *testing.T, email string) *models.User {
     t.Helper()
     
-    hash, _ := security.HashPassword("password123")
+    hash, _ := utils.HashPassword("password123")
     user, err := s.Client.User.Create().
         SetEmail(email).
         SetPasswordHash(hash).
@@ -752,7 +767,7 @@ func (b *UserBuilder) WithActive(isActive bool) *UserBuilder {
 func (b *UserBuilder) Build(t *testing.T, client *models.Client) *models.User {
     t.Helper()
     
-    hash, _ := security.HashPassword(b.password)
+    hash, _ := utils.HashPassword(b.password)
     
     user, err := client.User.Create().
         SetEmail(b.email).
@@ -799,7 +814,7 @@ func BenchmarkHashPassword(b *testing.B) {
     
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-        _, err := security.HashPassword(password)
+        _, err := utils.HashPassword(password)
         if err != nil {
             b.Fatal(err)
         }
@@ -808,11 +823,11 @@ func BenchmarkHashPassword(b *testing.B) {
 
 func BenchmarkCheckPassword(b *testing.B) {
     password := "testpassword123"
-    hash, _ := security.HashPassword(password)
+    hash, _ := utils.HashPassword(password)
     
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-        _, err := security.CheckPassword(hash, password)
+        _, err := utils.CheckPassword(hash, password)
         if err != nil {
             b.Fatal(err)
         }
@@ -827,7 +842,7 @@ func BenchmarkCheckPassword(b *testing.B) {
 go test -bench=. ./...
 
 # Run specific benchmark
-go test -bench=BenchmarkHashPassword ./gojang/http/security
+go test -bench=BenchmarkHashPassword ./app/gojang/utils
 
 # With memory allocation stats
 go test -bench=. -benchmem ./...
@@ -1186,7 +1201,7 @@ go test -v ./...
 go test -run TestFunctionName ./...
 
 # Run specific package
-go test ./gojang/http/handlers
+go test ./app/gojang/http/handlers
 
 # Race detection
 go test -race ./...

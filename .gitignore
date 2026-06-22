@@ -5,11 +5,9 @@
 *.so
 *.dylib
 /bin/
-/cmd/web/web
-/cmd/addmodel/addmodel
-/cmd/addpage/addpage
-/cmd/seed/seed
-/cmd/migrate/migrate
+/app/cmd/web/web
+/app/cmd/seed/seed
+/app/cmd/migrate/migrate
 
 # Test binary
 *.test

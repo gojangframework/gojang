@@ -25,13 +25,13 @@ Gojang uses **Zap** for high-performance structured logging with environment-bas
 
 ### 1. Initialization
 
-The logger is initialized automatically in `cmd/web/main.go`:
+The logger is initialized automatically in `app/cmd/web/main.go`:
 
 ```go
 package main
 
 import (
-    "github.com/gojangframework/gojang/gojang/utils"
+    "github.com/gojangframework/gojang/app/gojang/utils"
 )
 
 func main() {
@@ -73,7 +73,7 @@ DEBUG=false         # true enables debug mode
 Use for simple messages with string formatting:
 
 ```go
-import "github.com/gojangframework/gojang/gojang/utils"
+import "github.com/gojangframework/gojang/app/gojang/utils"
 
 // Debug - Development-only verbose output
 utils.Debugf("Processing request for user %d", userID)

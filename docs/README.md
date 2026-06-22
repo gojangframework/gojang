@@ -336,31 +336,19 @@ docs/
 ### Project Structure
 
 ```
-gojang/
-├── admin/                    # Admin panel (auto-CRUD interface)
-│   ├── models.go            # Model registration
-│   ├── registry.go          # Generic CRUD operations
-│   ├── handler.go           # Admin handlers
-│   ├── admin_renderer.go    # Admin template renderer
-│   └── views/               # Admin templates
-├── cmd/
+app/
+├── cmd/                     # Application commands
+│   ├── migrate/
+│   ├── seed/
 │   └── web/
-│       └── main.go          # Application entry point
-├── config/
-│   └── config.go            # Configuration management
-├── http/
-│   ├── handlers/            # Request handlers
-│   ├── middleware/          # Auth, sessions, security
-│   ├── routes/              # Route definitions
-│   └── security/            # Password hashing
-├── models/
-│   ├── schema/              # Ent schemas (YOUR models go here)
-│   └── *.go                 # Generated Ent code
-└── views/
-    ├── forms/               # Form validation structs
-    ├── renderers/           # Template rendering
-    ├── templates/           # HTML templates
-    └── static/              # CSS, images
+├── gojang/                  # Framework core, admin, auth, models, renderers
+│   ├── admin/               # Admin panel and admin templates
+│   ├── http/                # Core handlers, middleware, and routes
+│   ├── models/              # Ent schemas, generated code, and migrations
+│   └── views/               # Framework renderer and embedded FS wiring
+├── pages/                   # App-owned page handlers and routes
+├── posts/                   # App-owned post handlers, routes, and templates
+└── views/                   # Public shared templates, static assets, translations, forms
 ```
 
 ## Key Concepts
@@ -401,13 +389,17 @@ func (h *Handler) Action(w http.ResponseWriter, r *http.Request) {
 Routes are organized by feature:
 
 ```go
-func RegisterFeatureRoutes(r chi.Router, handler *handlers.FeatureHandler) {
+func FeatureRoutes(handler *FeatureHandler, sm *scs.SessionManager, client *models.Client) chi.Router {
+    r := chi.NewRouter()
+
     r.Get("/feature", handler.List)
-    
+
     r.Group(func(r chi.Router) {
-        r.Use(middleware.RequireAuth)
+        r.Use(middleware.RequireAuth(sm, client))
         r.Post("/feature", handler.Create)
     })
+
+    return r
 }
 ```
 
@@ -435,7 +427,7 @@ No custom admin code needed! ✨
 
 ```go
 r.Group(func(r chi.Router) {
-    r.Use(middleware.RequireAuth)
+    r.Use(middleware.RequireAuth(sm, client))
     r.Get("/protected", handler.Protected)
 })
 ```
@@ -444,8 +436,8 @@ r.Group(func(r chi.Router) {
 
 ```go
 r.Group(func(r chi.Router) {
-    r.Use(middleware.RequireAuth)
-    r.Use(middleware.RequirePermission("is_staff"))
+    r.Use(middleware.RequireAuth(sm, client))
+    r.Use(middleware.RequireStaff)
     r.Get("/admin-only", handler.AdminOnly)
 })
 ```
@@ -453,8 +445,8 @@ r.Group(func(r chi.Router) {
 ### Get Current User
 
 ```go
-user, authenticated := middleware.GetUserFromContext(r.Context())
-if !authenticated {
+user := middleware.GetUser(r.Context())
+if user == nil {
     // Not logged in
 }
 ```
@@ -491,7 +483,7 @@ if r.Header.Get("HX-Request") == "true" {
 ### 1. Adding a New Feature
 
 1. Create Ent schema (if needed)
-2. Generate code: `cd gojang/models && go generate ./...`
+2. Generate code: `go generate ./app/gojang/models`
 3. Create handler
 4. Create routes
 5. Create templates
@@ -502,7 +494,7 @@ if r.Header.Get("HX-Request") == "true" {
 
 ```bash
 # Development (basic)
-go run ./gojang/cmd/web
+go run ./app/cmd/web
 
 # Development with live reload (recommended)
 task dev
@@ -513,7 +505,7 @@ task run              # Build and run
 task test             # Run tests
 
 # Build for production
-go build -o app ./gojang/cmd/web
+go build -o app ./app/cmd/web
 ./app
 ```
 
@@ -557,7 +549,7 @@ See the [Taskfile Commands Guide](./taskfile-guide.md) for detailed migration do
 go test ./...
 
 # Test specific package
-go test ./gojang/http/handlers
+go test ./app/pages
 
 # With coverage
 go test -cover ./...
@@ -569,7 +561,7 @@ go test -cover ./...
 
 ```bash
 # Generate Ent code after schema changes
-cd gojang/models && go generate ./...
+go generate ./app/gojang/models
 
 # Format code
 go fmt ./...
@@ -581,7 +573,7 @@ go vet ./...
 go mod tidy
 
 # Build
-go build -o web.exe ./gojang/cmd/web
+go build -o web.exe ./app/cmd/web
 
 # Run
 ./web.exe
@@ -619,7 +611,7 @@ CSRF_SECRET=your-csrf-secret-here
 - Use middleware.RequireAuth for protected routes
 - Validate all user input
 - Use CSRF protection (built-in)
-- Hash passwords (use security.HashPassword)
+- Hash passwords (use utils.HashPassword)
 - Sanitize HTML output (built-in)
 
 ❌ **DON'T:**
@@ -664,17 +656,15 @@ CSRF_SECRET=your-csrf-secret-here
 - **Solution:** Restart the server (or use `air` for auto-reload)
 
 **Problem:** Template not found
-- **Solution:** Check file exists in `gojang/views/templates/` and name matches
+- **Solution:** Check file exists in `app/views/templates/` and name matches
 
 **Problem:** Database locked error
 - **Solution:** Close other connections to the SQLite database
 
 **Problem:** Build errors after schema change
-- **Solution:** Delete generated files and regenerate:
+- **Solution:** Regenerate Ent code:
   ```bash
-  cd gojang/models
-  rm *.go
-  go generate ./...
+  go generate ./app/gojang/models
   ```
 
 **Problem:** 404 on route

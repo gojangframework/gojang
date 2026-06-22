@@ -192,7 +192,7 @@ go get github.com/gomodule/redigo/redis
 
 **2. Update session manager code:**
 
-Edit `gojang/http/middleware/session.go`:
+Edit `app/gojang/http/middleware/session.go`:
 
 ```go
 package middleware
@@ -201,7 +201,7 @@ import (
 	"time"
 	"os"
 
-	"github.com/gojangframework/gojang/gojang/config"
+	"github.com/gojangframework/gojang/app/gojang/config"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/gomodule/redigo/redis"
@@ -567,10 +567,10 @@ docker-compose up -d --scale app=3
 
 Add a health check endpoint to your application for load balancer monitoring.
 
-**Create `gojang/http/handlers/health.go`:**
+**Create `app/health/health.handler.go`:**
 
 ```go
-package handlers
+package health
 
 import (
 	"net/http"
@@ -585,7 +585,10 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 
 **Add to router:**
 ```go
-r.Get("/health", handlers.HealthCheck)
+// Add this import:
+// "github.com/gojangframework/gojang/app/health"
+
+r.Get("/health", health.HealthCheck)
 ```
 
 **Test:**

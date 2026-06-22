@@ -5,9 +5,9 @@ tmp_dir = "tmp"
 [build]
   args_bin = []
   bin = "./tmp/main"
-  cmd = "go build -o ./tmp/main ./gojang/cmd/web"
+  cmd = "go build -o ./tmp/main ./app/cmd/web"
   delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "bin", "gojang/models/migrations"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "bin", "app/gojang/models/migrations"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
