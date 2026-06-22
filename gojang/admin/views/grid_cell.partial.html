@@ -1,0 +1,61 @@
+{{$data := .}}
+{{if .Data}}{{$data = .Data}}{{end}}
+{{$config := index $data "Config"}}
+{{$field := index $data "Field"}}
+{{$record := index $data "Record"}}
+{{$errors := index $data "Errors"}}
+{{$page := index $data "Page"}}
+{{$perPage := index $data "PerPage"}}
+{{$gridQuery := index $data "GridQuery"}}
+{{$id := getID $record}}
+
+<td class="sheet-cell {{if not (canEditRecordField $config $record $field)}}locked{{end}}" style="min-width: {{$field.Width}}px;">
+    {{if $errors}}{{if index $errors $field.Name}}
+    <div class="cell-error">{{index $errors $field.Name}}</div>
+    {{end}}{{end}}
+
+    {{if canEditRecordField $config $record $field}}
+        {{if eq $field.Type "bool"}}
+        <form class="cell-bool-form"
+              hx-patch="/admin/t/{{$config.Name | lower}}/records/{{$id}}/fields/{{$field.Name}}"
+              hx-target="closest td"
+              hx-swap="outerHTML">
+            <input type="hidden" name="value" value="false">
+            <input type="checkbox"
+                   name="value"
+                   value="true"
+                   {{if boolValue $record $field}}checked{{end}}
+                   onchange="this.form.requestSubmit()">
+        </form>
+        {{else if eq $field.Type "text"}}
+        <form hx-patch="/admin/t/{{$config.Name | lower}}/records/{{$id}}/fields/{{$field.Name}}"
+              hx-target="closest td"
+              hx-swap="outerHTML">
+            <textarea name="value" rows="1" class="cell-textarea"
+                      onblur="this.form.requestSubmit()">{{inputValue $record $field}}</textarea>
+        </form>
+        {{else}}
+        <form hx-patch="/admin/t/{{$config.Name | lower}}/records/{{$id}}/fields/{{$field.Name}}"
+              hx-target="closest td"
+              hx-swap="outerHTML">
+            <input class="cell-input"
+                   type="{{inputType $field}}"
+                   name="value"
+                   value="{{inputValue $record $field}}"
+                   onblur="this.form.requestSubmit()">
+        </form>
+        {{end}}
+    {{else}}
+        <button class="cell-readonly"
+                {{if $gridQuery}}
+                hx-get="/admin/t/{{$config.Name | lower}}/records/{{$id}}?{{$gridQuery}}"
+                {{else}}
+                hx-get="/admin/t/{{$config.Name | lower}}/records/{{$id}}?page={{$page}}&per_page={{$perPage}}"
+                {{end}}
+                hx-target="#record-drawer"
+                hx-swap="innerHTML"
+                type="button">
+            {{cellValue $record $field}}
+        </button>
+    {{end}}
+</td>

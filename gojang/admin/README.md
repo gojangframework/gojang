@@ -8,38 +8,36 @@ Self-contained admin panel for Gojang framework.
 gojang/admin/
 ├── admin_renderer.go      # Admin template renderer (independent from public site)
 ├── admin_routes.go        # Admin route definitions
-├── handler.go             # Admin HTTP handlers (CRUD operations)
-├── models.go              # Model registration (User, Post, etc.)
-├── registry.go            # Model registry with reflection-based field discovery
+├── handler.go             # Admin workspace and CRUD HTTP handlers
+├── models.go              # Model-specific admin overrides
+├── registry.go            # Ent model discovery and reflection-based field metadata
 └── views/
     ├── admin_base.html           # Admin base layout
-    ├── admin_main.html           # Admin dashboard (renamed from dashboard.html)
-    ├── model_index.html          # Model list page
-    ├── model_list.partial.html   # Model list partial (HTMX)
-    ├── model_form.html           # Create/Edit form modal
-    └── model_delete.html         # Delete confirmation modal
+    ├── admin_main.html           # Empty workspace fallback
+    ├── workspace.html            # Airtable-style resource workspace
+    ├── workspace_grid.partial.html
+    ├── grid_cell.partial.html
+    └── record_drawer.partial.html
 ```
 
 ## Key Features
 
 - **Separate from public site**: Independent templates, renderer, and routes
-- **Generic CRUD**: Automatic admin interface for any Ent model
+- **Generic CRUD**: Automatic admin interface for discovered Ent models
 - **Reflection-based**: Auto-discovers model fields and types
 - **Smart field detection**: Automatically detects email, password, text, bool, int, time fields
-- **HTMX-powered**: Modal forms and instant updates without page reloads
+- **HTMX-powered**: Inline grid edits and drawer saves without page reloads
 - **Type-safe**: Uses Ent's generated code for database operations
 
 ## Usage
 
-### 1. Register Models
+### 1. Configure Overrides
 
-In `models.go`, register your models:
+Models are discovered from `*models.Client`. Use `models.go` only for admin-specific overrides:
 
 ```go
 func RegisterModels(registry *Registry) {
-    registerUserModel(registry)
-    registerPostModel(registry)
-    // Add more models here
+    // Optional: override fields, hooks, icons, or list columns.
 }
 ```
 
@@ -52,7 +50,7 @@ In `main.go`:
 adminRenderer, _ := admin.NewAdminRenderer(cfg.Debug)
 adminRegistry := admin.NewRegistry(client)
 admin.RegisterModels(adminRegistry)
-adminHandler := admin.NewHandler(adminRegistry, adminRenderer)
+adminHandler := admin.NewHandler(adminRegistry, adminRenderer, client)
 
 // Mount admin routes
 r.Mount("/admin", admin.AdminRoutes(adminHandler, sessionManager, client))
@@ -66,57 +64,59 @@ Navigate to `http://localhost:8080/admin` (requires staff user).
 
 ### `admin_renderer.go`
 - Template renderer specifically for admin panel
-- No base layout wrapper for modals
-- Uses `./gojang/admin/views/templates` for template files
-- Includes template functions: `fieldValue`, `getID`, `formatDateTime`
+- Renders full workspace pages and HTMX fragments
+- Uses embedded files from `gojang/admin/views`
+- Includes workspace template helpers for cells, drawer inputs, and field locking
 
 ### `admin_routes.go`
 - Route definitions using chi router
 - Applies auth, staff, and audit middleware
-- Generic CRUD routes: `/{model}`, `/{model}/new`, `/{model}/{id}/edit`, etc.
+- Workspace CRUD routes under `/t/{resource}`
+- Legacy `/{model}` admin routes redirect into `/t/{resource}`
 
 ### `handler.go`
-- HTTP handlers for all CRUD operations
+- HTTP handlers for workspace rendering, inline grid editing, drawer editing, and CRUD operations
 - Context-aware database operations
 - Smart HTMX response handling
 - Error handling and validation
 
 ### `registry.go`
-- Model registration system
-- Reflection-based field discovery from Ent models
+- Ent client discovery and model override system
+- Reflection-based field discovery from Ent structs
 - Field type detection (email, password, int, bool, time, text)
 - Automatic readonly field marking (ID, CreatedAt, UpdatedAt)
 - AdminOverrides for customization
 
 ### `models.go`
-- Model registration functions
-- Minimal configuration needed (~30 lines per model)
-- Auto-discovers fields from Ent schemas
+- Optional per-model admin overrides
+- User password handling and Post author assignment hooks
+- Auto-discovery remains the default for all Ent models
 
 ## Template System
 
 ### Base Template (`admin_base.html`)
 - Separate from public site's `base.html`
 - Admin-specific header with navigation
-- Modal containers for forms and confirmations
+- Record drawer target and HTMX CSRF setup
 - Custom admin styling
 
 ### Full Pages
-- `admin_main.html`: Shows all registered models
-- `model_index.html`: Lists all records for a model
+- `admin_main.html`: Empty workspace fallback
+- `workspace.html`: Resource sidebar, toolbar, and grid workspace
 
-### Modals/Fragments
-- `model_form.html`: Create/edit form (rendered as modal)
-- `model_delete.html`: Delete confirmation (rendered as modal)
-- `model_list.partial.html`: Table of records (HTMX partial)
+### Fragments
+- `workspace_grid.partial.html`: Resource grid
+- `grid_cell.partial.html`: Inline editable cell
+- `record_drawer.partial.html`: Create/edit drawer
 
 ## Customization
 
 ### Override Model Display
 
 ```go
-admin.RegisterAdmin(registry, "Post", &admin.AdminOverrides{
-    Icon: "📝",
+registry.RegisterModel(admin.ModelRegistration{
+    ModelType: &models.Post{},
+    Icon: "✎",
     NamePlural: "Blog Posts",
     HiddenFields: []string{"Slug"},
 })
@@ -124,15 +124,15 @@ admin.RegisterAdmin(registry, "Post", &admin.AdminOverrides{
 
 ### Add Custom Fields
 
-Extend the field detection in `registry.go`:
+Add virtual or admin-only fields in a model override:
 
 ```go
-func detectFieldType(fieldName string, fieldType string) string {
-    if strings.Contains(lower, "url") {
-        return "url"
-    }
-    // ... existing detection
-}
+registry.RegisterModel(admin.ModelRegistration{
+    ModelType: &models.User{},
+    CustomFields: []admin.FieldConfig{
+        {Name: "Password", Type: admin.FieldTypePassword, Editable: true, Virtual: true},
+    },
+})
 ```
 
 ## Security

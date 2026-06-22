@@ -11,27 +11,30 @@ import (
 
 // extractFields uses reflection to discover fields from a struct
 func extractFields(example interface{}, override AdminOverrides) []FieldConfig {
-	var fields []FieldConfig
-
 	v := reflect.ValueOf(example)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
 
-	t := v.Type()
+	return extractFieldsFromType(v.Type(), override)
+}
+
+// extractFieldsFromType uses reflection to discover fields from a generated Ent entity.
+func extractFieldsFromType(t reflect.Type, override AdminOverrides) []FieldConfig {
+	var fields []FieldConfig
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
 		// Skip unexported fields and special fields
-		if !field.IsExported() || field.Name == "Edges" || field.Name == "selectValues" {
+		if !field.IsExported() || field.Name == "Edges" || field.Name == "selectValues" || field.Name == "config" {
 			continue
 		}
 
 		fieldName := field.Name
 
 		// Check if hidden
-		isHidden := contains(override.HiddenFields, fieldName)
+		isHidden := contains(override.HiddenFields, fieldName) || fieldNameIsSensitive(fieldName)
 		// Readonly defaults: ID, CreatedAt, UpdatedAt. Do not blanket-match all *At fields.
 		isReadonly := contains(override.ReadonlyFields, fieldName) ||
 			fieldName == "CreatedAt" ||
@@ -54,17 +57,28 @@ func extractFields(example interface{}, override AdminOverrides) []FieldConfig {
 		// Pointers are optional as they can be nil
 		isPointer := field.Type.Kind() == reflect.Ptr
 		required := !isReadonly && !isHidden && fieldType != FieldTypeBool && !isOptional && !isPointer
+		editable := !isReadonly && !isHidden && !fieldNameIsSensitive(fieldName)
+		system := isReadonly || fieldName == "ID"
 
 		fields = append(fields, FieldConfig{
-			Name:      fieldName,
-			Label:     label,
-			Type:      fieldType,
-			Required:  required,
-			Readonly:  isReadonly,
-			Hidden:    isHidden,
-			Sensitive: fieldName == "PasswordHash",
+			Name:       fieldName,
+			Label:      label,
+			Type:       fieldType,
+			Required:   required,
+			Readonly:   isReadonly,
+			Hidden:     isHidden,
+			Sensitive:  fieldNameIsSensitive(fieldName),
+			Editable:   editable,
+			Visible:    !isHidden,
+			Width:      defaultFieldWidth(fieldType, fieldName),
+			Primary:    false,
+			Sortable:   !isHidden,
+			Filterable: !isHidden,
+			System:     system,
 		})
 	}
+
+	markPrimaryField(fields)
 
 	return fields
 }
@@ -110,6 +124,80 @@ func detectFieldType(t reflect.Type, fieldName string, overrides map[string]Fiel
 	}
 
 	return FieldTypeString
+}
+
+func fieldNameIsSensitive(fieldName string) bool {
+	lower := strings.ToLower(fieldName)
+	return strings.Contains(lower, "password") ||
+		strings.Contains(lower, "token") ||
+		strings.Contains(lower, "secret") ||
+		strings.Contains(lower, "hash")
+}
+
+func defaultFieldWidth(fieldType FieldType, fieldName string) int {
+	switch fieldType {
+	case FieldTypeBool:
+		return 120
+	case FieldTypeInt, FieldTypeFloat:
+		return 130
+	case FieldTypeTime:
+		return 190
+	case FieldTypeText:
+		return 340
+	default:
+		if fieldName == "ID" {
+			return 285
+		}
+		return 220
+	}
+}
+
+func markPrimaryField(fields []FieldConfig) {
+	preferred := []string{"Email", "Name", "Title", "Subject", "Key"}
+	for _, name := range preferred {
+		for i := range fields {
+			if fields[i].Name == name && fields[i].Visible && !fields[i].System {
+				fields[i].Primary = true
+				return
+			}
+		}
+	}
+	for i := range fields {
+		if fields[i].Visible && !fields[i].System {
+			fields[i].Primary = true
+			return
+		}
+	}
+}
+
+func visibleFieldNames(fields []FieldConfig) []string {
+	names := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if field.Visible && !field.Hidden {
+			names = append(names, field.Name)
+		}
+	}
+	return names
+}
+
+func readonlyFieldNames(fields []FieldConfig) []string {
+	names := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if field.Readonly {
+			names = append(names, field.Name)
+		}
+	}
+	return names
+}
+
+func hiddenFieldNames(fields []FieldConfig) []string {
+	names := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if field.Hidden {
+			names = append(names, field.Name)
+		}
+	}
+	return names
 }
 
 // formatLabel converts field name to display label

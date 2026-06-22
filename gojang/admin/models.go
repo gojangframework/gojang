@@ -26,6 +26,8 @@ type ModelRegistration struct {
 	OptionalFields []string
 	CustomFields   []FieldConfig  // Additional fields not in the struct (e.g., Password for User)
 	BeforeSave     BeforeSaveHook // Hook to transform data before save
+	BeforeCreate   BeforeSaveHook // Hook to transform data before create
+	BeforeUpdate   BeforeSaveHook // Hook to transform data before update
 	QueryModifier  AfterLoadHook  // Hook to modify query (e.g., eager load relations)
 }
 
@@ -49,6 +51,9 @@ func RegisterModels(registry *Registry) {
 				Type:      FieldTypePassword,
 				Required:  true, // Required for create, but we'll make it optional on edit in the template
 				Sensitive: true,
+				Editable:  true,
+				Visible:   false,
+				Virtual:   true,
 				Help:      "Must be at least 10 characters with uppercase, lowercase, and special character",
 			},
 			{
@@ -57,6 +62,9 @@ func RegisterModels(registry *Registry) {
 				Type:      FieldTypePassword,
 				Required:  true, // Required for create, but we'll make it optional on edit in the template
 				Sensitive: true,
+				Editable:  true,
+				Visible:   false,
+				Virtual:   true,
 				Help:      "Re-enter password to confirm",
 			},
 		},
@@ -102,8 +110,8 @@ func RegisterModels(registry *Registry) {
 		ListFields:     []string{"ID", "Subject", "Author", "CreatedAt"},
 		ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
 
-		// Set the author to the current user
-		BeforeSave: func(ctx context.Context, data map[string]interface{}) error {
+		// Set the author to the current user on create only.
+		BeforeCreate: func(ctx context.Context, data map[string]interface{}) error {
 			// Get the current user from context
 			user := middleware.GetUser(ctx)
 			if user == nil {

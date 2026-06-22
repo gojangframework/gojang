@@ -30,16 +30,19 @@ type ModelConfig struct {
 // legacy ModelConfig so existing code and generated integrations keep working.
 type ResourceConfig = ModelConfig
 
+type clearFieldValue struct{}
+
 // FieldConfig defines configuration for a single field
 type FieldConfig struct {
-	Name      string    // Field name (database column)
-	Label     string    // Display label
-	Type      FieldType // Field type
-	Required  bool      // Is field required?
-	Readonly  bool      // Is field readonly?
-	Sensitive bool      // Is field sensitive (e.g., password)?
-	Hidden    bool      // Hide from forms
-	Help      string    // Help text shown below field
+	Name      string      // Field name (database column)
+	Label     string      // Display label
+	Type      FieldType   // Field type
+	Required  bool        // Is field required?
+	Readonly  bool        // Is field readonly?
+	Sensitive bool        // Is field sensitive (e.g., password)?
+	Hidden    bool        // Hide from forms
+	Help      string      // Help text shown below field
+	Default   interface{} // Optional default value for create forms
 
 	// Grid/workspace metadata
 	Editable   bool // Can be edited inline or in the drawer?

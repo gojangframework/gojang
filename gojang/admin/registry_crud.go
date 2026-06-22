@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 )
 
@@ -176,7 +177,7 @@ func (r *Registry) countAll(ctx context.Context, modelName string) (int, error) 
 }
 
 // queryByID retrieves a single record by ID using reflection
-func (r *Registry) queryByID(ctx context.Context, modelName string, id uuid.UUID, _ AfterLoadHook) (interface{}, error) {
+func (r *Registry) queryByID(ctx context.Context, modelName string, id uuid.UUID, modifier AfterLoadHook) (interface{}, error) {
 	// Get the model client using reflection (e.g., r.client.User)
 	clientVal := reflect.ValueOf(r.client).Elem()
 	modelClient := clientVal.FieldByName(modelName)
@@ -185,12 +186,15 @@ func (r *Registry) queryByID(ctx context.Context, modelName string, id uuid.UUID
 		return nil, fmt.Errorf("model %s not found on client", modelName)
 	}
 
+	if modifier != nil {
+		return r.queryByIDWithModifier(ctx, modelName, modelClient, id, modifier)
+	}
+
 	// Call Get(ctx, id) method
 	getMethod := modelClient.MethodByName("Get")
 	if !getMethod.IsValid() {
 		return nil, fmt.Errorf("Get method not found for model %s", modelName)
 	}
-
 	getResults := getMethod.Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(id),
@@ -206,6 +210,68 @@ func (r *Registry) queryByID(ctx context.Context, modelName string, id uuid.UUID
 	}
 
 	return getResults[0].Interface(), nil
+}
+
+func (r *Registry) queryByIDWithModifier(ctx context.Context, modelName string, modelClient reflect.Value, id uuid.UUID, modifier AfterLoadHook) (interface{}, error) {
+	queryMethod := modelClient.MethodByName("Query")
+	if !queryMethod.IsValid() {
+		return nil, fmt.Errorf("query method not found for model %s", modelName)
+	}
+	queryResults := queryMethod.Call(nil)
+	if len(queryResults) != 1 {
+		return nil, fmt.Errorf("query method returned unexpected number of values for model %s", modelName)
+	}
+
+	query := modifier(ctx, queryResults[0].Interface())
+	queryVal := reflect.ValueOf(query)
+	whereMethod := queryVal.MethodByName("Where")
+	if !whereMethod.IsValid() {
+		return nil, fmt.Errorf("where method not found for model %s", modelName)
+	}
+	predicate, err := idPredicateForWhere(whereMethod, id)
+	if err != nil {
+		return nil, fmt.Errorf("%s ID predicate: %w", modelName, err)
+	}
+	whereResults := whereMethod.Call([]reflect.Value{predicate})
+	if len(whereResults) != 1 {
+		return nil, fmt.Errorf("where method returned unexpected number of values for model %s", modelName)
+	}
+	queryVal = whereResults[0]
+
+	onlyMethod := queryVal.MethodByName("Only")
+	if !onlyMethod.IsValid() {
+		return nil, fmt.Errorf("only method not found for model %s", modelName)
+	}
+	onlyResults := onlyMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
+	if len(onlyResults) != 2 {
+		return nil, fmt.Errorf("only method returned unexpected number of values for model %s", modelName)
+	}
+	if !onlyResults[1].IsNil() {
+		return nil, onlyResults[1].Interface().(error)
+	}
+	return onlyResults[0].Interface(), nil
+}
+
+func idPredicateForWhere(whereMethod reflect.Value, id uuid.UUID) (reflect.Value, error) {
+	methodType := whereMethod.Type()
+	if !methodType.IsVariadic() || methodType.NumIn() != 1 {
+		return reflect.Value{}, fmt.Errorf("unexpected where signature")
+	}
+	sliceType := methodType.In(0)
+	if sliceType.Kind() != reflect.Slice {
+		return reflect.Value{}, fmt.Errorf("unexpected where argument type %s", sliceType)
+	}
+	predicateType := sliceType.Elem()
+	if predicateType.Kind() != reflect.Func || predicateType.NumIn() != 1 || predicateType.NumOut() != 0 {
+		return reflect.Value{}, fmt.Errorf("unexpected predicate type %s", predicateType)
+	}
+	return reflect.MakeFunc(predicateType, func(args []reflect.Value) []reflect.Value {
+		selector, ok := args[0].Interface().(*sql.Selector)
+		if ok {
+			sql.FieldEQ("id", id)(selector)
+		}
+		return nil
+	}), nil
 }
 
 // genericCreate creates a new record using reflection
@@ -352,8 +418,19 @@ func setFieldsOnBuilder(builder interface{}, data map[string]interface{}) error 
 
 	// For each field in data, call the appropriate Set method
 	for fieldName, value := range data {
-		// Skip nil values and empty strings for non-required fields
-		if value == nil || (value == "" && fieldName != "Body") {
+		if _, clear := value.(clearFieldValue); clear {
+			clearerName := "Clear" + fieldName
+			clearer := builderVal.MethodByName(clearerName)
+			if !clearer.IsValid() {
+				return fmt.Errorf("clearer not found for field %s", fieldName)
+			}
+			if clearer.Type().NumIn() != 0 {
+				return fmt.Errorf("clearer %s has unexpected signature", clearerName)
+			}
+			clearer.Call(nil)
+			continue
+		}
+		if value == nil {
 			continue
 		}
 
@@ -366,12 +443,19 @@ func setFieldsOnBuilder(builder interface{}, data map[string]interface{}) error 
 			setterName = "Set" + fieldName + "ID"
 			method = builderVal.MethodByName(setterName)
 			if !method.IsValid() {
-				continue // Skip fields without setters
+				return fmt.Errorf("setter not found for field %s", fieldName)
 			}
 		}
 
 		// Call the setter method
 		valueToSet := reflect.ValueOf(value)
+		methodType := method.Type()
+		if methodType.NumIn() != 1 {
+			return fmt.Errorf("setter %s has unexpected signature", setterName)
+		}
+		if !valueToSet.Type().AssignableTo(methodType.In(0)) {
+			return fmt.Errorf("field %s has type %s, expected %s", fieldName, valueToSet.Type(), methodType.In(0))
+		}
 		method.Call([]reflect.Value{valueToSet})
 	}
 
