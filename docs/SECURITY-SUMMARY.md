@@ -160,7 +160,7 @@ This document outlines the security features currently implemented in the Gojang
 ### Role-Based Access Control (RBAC)
 - **Roles:** regular user, staff, superuser
 - **Fields:** `is_active`, `is_staff`, `is_superuser`
-- **Location:** `app/gojang/models/schema/user.go`
+- **Location:** `app/schema/user.go`
 
 ### Middleware Protection
 1. **RequireAuth** - Ensures user is authenticated

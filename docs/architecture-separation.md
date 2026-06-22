@@ -15,9 +15,10 @@ app/
 ├── gojang/                     # Framework-owned code
 │   ├── admin/                  # Admin panel, renderer, routes, templates
 │   ├── http/                   # Core auth/user handlers and middleware
-│   ├── models/                 # Ent schemas, generated code, migrations
+│   ├── models/                 # Generated Ent code and migrations
 │   └── views/                  # Public renderer and embedded FS wiring
 ├── pages/                      # App-owned page handlers and routes
+├── schema/                     # Ent schema definitions
 ├── posts/                      # App-owned post handlers, routes, templates
 └── views/                      # Shared public templates, static files, i18n, forms
 ```

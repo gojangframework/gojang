@@ -341,12 +341,13 @@ app/
 │   ├── migrate/
 │   ├── seed/
 │   └── web/
-├── gojang/                  # Framework core, admin, auth, models, renderers
+├── gojang/                  # Framework core, admin, auth, generated models, renderers
 │   ├── admin/               # Admin panel and admin templates
 │   ├── http/                # Core handlers, middleware, and routes
-│   ├── models/              # Ent schemas, generated code, and migrations
+│   ├── models/              # Generated Ent code and migrations
 │   └── views/               # Framework renderer and embedded FS wiring
 ├── pages/                   # App-owned page handlers and routes
+├── schema/                  # Ent schema definitions
 ├── posts/                   # App-owned post handlers, routes, and templates
 └── views/                   # Public shared templates, static assets, translations, forms
 ```
