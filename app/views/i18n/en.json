@@ -35,7 +35,7 @@
   "framework_features": ["Blazing fast Go performance", "Type-safe development", "Hot reload dev server", "Flexible routing"],
   "orm_features": ["Ent ORM schema-first", "Type-safe queries", "Auto migrations", "Transaction support"],
   "security_features": ["Built-in authentication", "Argon2id hashing", "CSRF protection", "Rate limiting"],
-  "admin_features": ["Auto-generated interface", "Full CRUD operations", "Modal-based forms", "Responsive design"],
+  "admin_features": ["Auto-generated interface", "Full CRUD operations", "Modal-based forms", "Spreadsheet Layout"],
   "login_title": "Login - Gojang",
   "create_account_title": "Register - Gojang",
   "create_account": "Create Account",
