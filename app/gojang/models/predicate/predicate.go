@@ -6,11 +6,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AdminSetting is the predicate function for adminsetting builders.
+type AdminSetting func(*sql.Selector)
+
 // Post is the predicate function for post builders.
 type Post func(*sql.Selector)
-
-// Setting is the predicate function for setting builders.
-type Setting func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

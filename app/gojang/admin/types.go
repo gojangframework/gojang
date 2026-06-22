@@ -15,6 +15,7 @@ type ModelConfig struct {
 	ListFields     []string      // Fields to show in list view
 	HiddenFields   []string      // Fields to hide
 	ReadonlyFields []string      // Fields that can't be edited
+	Internal       bool          // Hide from generic admin workspace routes
 
 	// CRUD operations
 	QueryAll          func(ctx context.Context) ([]interface{}, error)

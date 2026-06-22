@@ -110,9 +110,8 @@ func (h *Handler) Grid(w http.ResponseWriter, r *http.Request) {
 
 // RecordDrawer renders the full record editor drawer.
 func (h *Handler) RecordDrawer(w http.ResponseWriter, r *http.Request) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -181,9 +180,8 @@ func (h *Handler) UpdateCell(w http.ResponseWriter, r *http.Request) {
 
 // SaveRecord updates a record from the drawer and refreshes the grid.
 func (h *Handler) SaveRecord(w http.ResponseWriter, r *http.Request) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -251,9 +249,8 @@ func (h *Handler) SaveRecord(w http.ResponseWriter, r *http.Request) {
 
 // CreateRecord creates a record from the drawer/new-row form and refreshes the grid.
 func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return
 	}
 	data, errors := h.editableFormData(r, config, true)
@@ -308,9 +305,8 @@ func (h *Handler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 
 // NewRecordDrawer renders an empty drawer for record creation.
 func (h *Handler) NewRecordDrawer(w http.ResponseWriter, r *http.Request) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return
 	}
 	h.Renderer.Render(w, r, "record_drawer.partial.html", &TemplateData{
@@ -326,9 +322,8 @@ func (h *Handler) NewRecordDrawer(w http.ResponseWriter, r *http.Request) {
 
 // DeleteRecord deletes a record and refreshes the grid.
 func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -341,8 +336,8 @@ func (h *Handler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 		h.Renderer.RenderError(w, r, http.StatusNotFound, config.Name+" not found")
 		return
 	}
-	if isProtectedSettingRecord(config, record) {
-		h.Renderer.RenderError(w, r, http.StatusForbidden, "Protected settings cannot be deleted")
+	if isProtectedAdminSettingRecord(config, record) {
+		h.Renderer.RenderError(w, r, http.StatusForbidden, "Protected admin preferences cannot be deleted")
 		return
 	}
 	if err := config.DeleteFunc(r.Context(), id); err != nil {
@@ -383,6 +378,9 @@ func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resou
 	config, err := h.Registry.Get(resourceName)
 	if err != nil {
 		return nil, err
+	}
+	if config.Internal {
+		return nil, fmt.Errorf("model %s not found", resourceName)
 	}
 	page := parsePositiveInt(r.URL.Query().Get("page"), 1)
 	perPage := parseAllowedPerPage(r.URL.Query().Get("per_page"), 50)
@@ -449,6 +447,15 @@ func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, fi
 		end = totalCount
 	}
 	return records[offset:end], totalCount, nil
+}
+
+func (h *Handler) publicResourceConfig(w http.ResponseWriter, r *http.Request) (*ModelConfig, bool) {
+	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
+	if err != nil || config.Internal {
+		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+		return nil, false
+	}
+	return config, true
 }
 
 func parseWorkspaceView(raw string) string {
@@ -768,9 +775,8 @@ func submittedFieldValue(r *http.Request, name string) string {
 }
 
 func (h *Handler) lookupMutationTarget(w http.ResponseWriter, r *http.Request) (*ModelConfig, FieldConfig, uuid.UUID, bool) {
-	config, err := h.Registry.Get(chi.URLParam(r, "resource"))
-	if err != nil {
-		h.Renderer.RenderError(w, r, http.StatusNotFound, "Model not found")
+	config, ok := h.publicResourceConfig(w, r)
+	if !ok {
 		return nil, FieldConfig{}, uuid.UUID{}, false
 	}
 	fieldName := chi.URLParam(r, "field")
@@ -897,7 +903,7 @@ func (h *Handler) renderCellError(w http.ResponseWriter, r *http.Request, config
 }
 
 func (h *Handler) rejectProtectedRecordMutations(config *ModelConfig, record interface{}, data map[string]interface{}) error {
-	if config == nil || config.Name != "Setting" {
+	if config == nil || config.Name != "AdminSetting" {
 		return nil
 	}
 	for fieldName := range data {
@@ -914,12 +920,12 @@ func (h *Handler) rejectProtectedRecordMutations(config *ModelConfig, record int
 	return nil
 }
 
-func isProtectedSettingRecord(config *ModelConfig, record interface{}) bool {
-	return config != nil && config.Name == "Setting" && isAdminSettingRecord(record)
+func isProtectedAdminSettingRecord(config *ModelConfig, record interface{}) bool {
+	return config != nil && config.Name == "AdminSetting" && isAdminSettingRecord(record)
 }
 
-// SaveModelOrderSetting saves the model order preference
-func (h *Handler) SaveModelOrderSetting(w http.ResponseWriter, r *http.Request) {
+// SaveModelOrderPreference saves the model order preference.
+func (h *Handler) SaveModelOrderPreference(w http.ResponseWriter, r *http.Request) {
 	// Parse JSON body
 	var request struct {
 		Order []string `json:"order"`

@@ -230,6 +230,9 @@ func (r *Registry) List() []*ModelConfig {
 	configs := make([]*ModelConfig, 0, len(r.modelKeys))
 	for _, key := range r.modelKeys {
 		if config, ok := r.models[key]; ok {
+			if config.Internal {
+				continue
+			}
 			configs = append(configs, config)
 		}
 	}
@@ -333,7 +336,8 @@ func applyResourceDefaults(config *ModelConfig) {
 	if config == nil {
 		return
 	}
-	if config.Name == "Setting" {
+	if config.Name == "AdminSetting" {
+		config.Internal = true
 		for i := range config.Fields {
 			if config.Fields[i].Name == "Key" {
 				config.Fields[i].System = true
@@ -358,7 +362,7 @@ func defaultResourceIcon(modelName string) string {
 		return "👤"
 	case "Post":
 		return "✎"
-	case "Setting":
+	case "AdminSetting":
 		return "⚙"
 	default:
 		return "▦"

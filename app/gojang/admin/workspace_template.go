@@ -178,7 +178,7 @@ func fieldReadonlyForRecord(config *ModelConfig, record interface{}, field Field
 }
 
 func isProtectedRecordField(config *ModelConfig, record interface{}, fieldName string) bool {
-	if config == nil || config.Name != "Setting" {
+	if config == nil || config.Name != "AdminSetting" {
 		return false
 	}
 	if fieldName == "Key" {

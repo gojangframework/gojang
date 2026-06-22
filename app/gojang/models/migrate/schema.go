@@ -8,6 +8,18 @@ import (
 )
 
 var (
+	// AdminSettingsColumns holds the columns for the "admin_settings" table.
+	AdminSettingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "key", Type: field.TypeString, Unique: true},
+		{Name: "value", Type: field.TypeString, Size: 2147483647},
+	}
+	// AdminSettingsTable holds the schema information for the "admin_settings" table.
+	AdminSettingsTable = &schema.Table{
+		Name:       "admin_settings",
+		Columns:    AdminSettingsColumns,
+		PrimaryKey: []*schema.Column{AdminSettingsColumns[0]},
+	}
 	// PostsColumns holds the columns for the "posts" table.
 	PostsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -38,18 +50,6 @@ var (
 			},
 		},
 	}
-	// SettingsColumns holds the columns for the "settings" table.
-	SettingsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "key", Type: field.TypeString, Unique: true},
-		{Name: "value", Type: field.TypeString, Size: 2147483647},
-	}
-	// SettingsTable holds the schema information for the "settings" table.
-	SettingsTable = &schema.Table{
-		Name:       "settings",
-		Columns:    SettingsColumns,
-		PrimaryKey: []*schema.Column{SettingsColumns[0]},
-	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -77,8 +77,8 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AdminSettingsTable,
 		PostsTable,
-		SettingsTable,
 		UsersTable,
 	}
 )

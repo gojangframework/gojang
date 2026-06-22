@@ -20,23 +20,23 @@ func TestSaveModelOrderWithoutDriverReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected SaveModelOrder to reject a client without a database driver")
 	}
-	if !strings.Contains(err.Error(), "settings client is not available") {
-		t.Fatalf("expected settings client error, got %v", err)
+	if !strings.Contains(err.Error(), "admin settings client is not available") {
+		t.Fatalf("expected admin settings client error, got %v", err)
 	}
 }
 
 func TestNormalizedModelOrderKeepsMissingResourcesVisible(t *testing.T) {
 	registry := &Registry{
 		models: map[string]*ModelConfig{
-			"user":    {Name: "User"},
-			"post":    {Name: "Post"},
-			"setting": {Name: "Setting"},
+			"user":         {Name: "User"},
+			"post":         {Name: "Post"},
+			"adminsetting": {Name: "AdminSetting", Internal: true},
 		},
-		modelKeys: []string{"user", "post", "setting"},
+		modelKeys: []string{"user", "post", "adminsetting"},
 	}
 
-	got := registry.normalizedModelOrder([]string{"Setting", "missing", "User", "Setting"})
-	want := []string{"setting", "user", "post"}
+	got := registry.normalizedModelOrder([]string{"AdminSetting", "missing", "User", "AdminSetting"})
+	want := []string{"user", "post"}
 
 	if len(got) != len(want) {
 		t.Fatalf("expected %v, got %v", want, got)

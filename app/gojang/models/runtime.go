@@ -5,8 +5,8 @@ package models
 import (
 	"time"
 
+	"github.com/gojangframework/gojang/app/gojang/models/adminsetting"
 	"github.com/gojangframework/gojang/app/gojang/models/post"
-	"github.com/gojangframework/gojang/app/gojang/models/setting"
 	"github.com/gojangframework/gojang/app/gojang/models/user"
 	"github.com/gojangframework/gojang/app/schema"
 	"github.com/google/uuid"
@@ -16,6 +16,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	adminsettingFields := schema.AdminSetting{}.Fields()
+	_ = adminsettingFields
+	// adminsettingDescKey is the schema descriptor for key field.
+	adminsettingDescKey := adminsettingFields[1].Descriptor()
+	// adminsetting.KeyValidator is a validator for the "key" field. It is called by the builders before save.
+	adminsetting.KeyValidator = adminsettingDescKey.Validators[0].(func(string) error)
+	// adminsettingDescID is the schema descriptor for id field.
+	adminsettingDescID := adminsettingFields[0].Descriptor()
+	// adminsetting.DefaultID holds the default value on creation for the id field.
+	adminsetting.DefaultID = adminsettingDescID.Default.(func() uuid.UUID)
 	postFields := schema.Post{}.Fields()
 	_ = postFields
 	// postDescSubject is the schema descriptor for subject field.
@@ -54,16 +64,6 @@ func init() {
 	postDescID := postFields[0].Descriptor()
 	// post.DefaultID holds the default value on creation for the id field.
 	post.DefaultID = postDescID.Default.(func() uuid.UUID)
-	settingFields := schema.Setting{}.Fields()
-	_ = settingFields
-	// settingDescKey is the schema descriptor for key field.
-	settingDescKey := settingFields[1].Descriptor()
-	// setting.KeyValidator is a validator for the "key" field. It is called by the builders before save.
-	setting.KeyValidator = settingDescKey.Validators[0].(func(string) error)
-	// settingDescID is the schema descriptor for id field.
-	settingDescID := settingFields[0].Descriptor()
-	// setting.DefaultID holds the default value on creation for the id field.
-	setting.DefaultID = settingDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescEmail is the schema descriptor for email field.

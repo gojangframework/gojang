@@ -9,6 +9,18 @@ import (
 	"github.com/gojangframework/gojang/app/gojang/models"
 )
 
+// The AdminSettingFunc type is an adapter to allow the use of ordinary
+// function as AdminSetting mutator.
+type AdminSettingFunc func(context.Context, *models.AdminSettingMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AdminSettingFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	if mv, ok := m.(*models.AdminSettingMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *models.AdminSettingMutation", m)
+}
+
 // The PostFunc type is an adapter to allow the use of ordinary
 // function as Post mutator.
 type PostFunc func(context.Context, *models.PostMutation) (models.Value, error)
@@ -19,18 +31,6 @@ func (f PostFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *models.PostMutation", m)
-}
-
-// The SettingFunc type is an adapter to allow the use of ordinary
-// function as Setting mutator.
-type SettingFunc func(context.Context, *models.SettingMutation) (models.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f SettingFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
-	if mv, ok := m.(*models.SettingMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *models.SettingMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary

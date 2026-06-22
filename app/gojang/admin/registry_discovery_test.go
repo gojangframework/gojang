@@ -12,13 +12,30 @@ import (
 func TestNewRegistryDiscoversEntResources(t *testing.T) {
 	registry := NewRegistry(models.NewClient())
 
-	for _, name := range []string{"Post", "Setting", "User"} {
+	for _, name := range []string{"AdminSetting", "Post", "User"} {
 		config, err := registry.Get(name)
 		if err != nil {
 			t.Fatalf("expected resource %s to be discovered: %v", name, err)
 		}
 		if config.QueryAll == nil || config.CreateFunc == nil || config.UpdateFunc == nil || config.DeleteFunc == nil {
 			t.Fatalf("expected resource %s to have CRUD functions", name)
+		}
+	}
+}
+
+func TestAdminSettingIsInternalAndHiddenFromResourceList(t *testing.T) {
+	registry := NewRegistry(models.NewClient())
+
+	config, err := registry.Get("AdminSetting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !config.Internal {
+		t.Fatal("expected AdminSetting to be marked internal")
+	}
+	for _, resource := range registry.List() {
+		if resource.Name == "AdminSetting" {
+			t.Fatal("expected AdminSetting to be hidden from public admin resources")
 		}
 	}
 }
@@ -100,35 +117,35 @@ func TestRegisterModelPreservesDiscoveredRelationFields(t *testing.T) {
 	}
 }
 
-func TestSettingKeyIsLockedForExistingRecordsButAllowedOnCreate(t *testing.T) {
+func TestAdminSettingKeyIsLockedForExistingRecordsButAllowedOnCreate(t *testing.T) {
 	registry := NewRegistry(models.NewClient())
-	settingConfig, err := registry.Get("Setting")
+	settingConfig, err := registry.Get("AdminSetting")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	keyField, ok := findField(settingConfig, "Key")
 	if !ok {
-		t.Fatal("expected Setting.Key field")
+		t.Fatal("expected AdminSetting.Key field")
 	}
-	record := &models.Setting{Key: "site.title", Value: "Gojang"}
+	record := &models.AdminSetting{Key: "site.title", Value: "Gojang"}
 	if canEditRecordField(settingConfig, record, keyField) {
-		t.Fatal("expected existing Setting.Key to be locked")
+		t.Fatal("expected existing AdminSetting.Key to be locked")
 	}
 	if fieldReadonlyForRecord(settingConfig, nil, keyField) {
-		t.Fatal("expected Setting.Key to be editable when creating a new setting")
+		t.Fatal("expected AdminSetting.Key to be editable when creating a new setting")
 	}
 }
 
 func TestAdminSettingValueAndDeleteAreProtected(t *testing.T) {
-	config := &ModelConfig{Name: "Setting"}
-	record := &models.Setting{Key: "admin.workspace.sidebar_order", Value: `["User"]`}
+	config := &ModelConfig{Name: "AdminSetting"}
+	record := &models.AdminSetting{Key: "admin.workspace.sidebar_order", Value: `["User"]`}
 	handler := NewHandler(nil, nil, nil)
 
 	if err := handler.rejectProtectedRecordMutations(config, record, map[string]interface{}{"Value": "[]"}); err == nil {
 		t.Fatal("expected admin setting value update to be rejected")
 	}
-	if !isProtectedSettingRecord(config, record) {
+	if !isProtectedAdminSettingRecord(config, record) {
 		t.Fatal("expected admin setting record to be protected")
 	}
 	if err := handler.rejectProtectedRecordMutations(config, nil, map[string]interface{}{"Key": "admin.resource.User.field_visibility"}); err == nil {

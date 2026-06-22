@@ -16,8 +16,8 @@ func AdminRoutes(adminHandler *Handler, sm *scs.SessionManager, client *models.C
 	// Admin dashboard
 	r.Get("/", adminHandler.Dashboard)
 
-	// Admin settings
-	r.Post("/settings/model-order", adminHandler.SaveModelOrderSetting)
+	// Admin preferences
+	r.Post("/preferences/model-order", adminHandler.SaveModelOrderPreference)
 
 	// Airtable-style workspace routes
 	r.Route("/t/{resource}", func(resource chi.Router) {

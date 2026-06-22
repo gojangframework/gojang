@@ -7,25 +7,19 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/gojangframework/gojang/app/gojang/models/setting"
+	"github.com/gojangframework/gojang/app/gojang/models/adminsetting"
 )
 
 // LoadModelOrder loads the saved model order from database and applies it
 func (r *Registry) LoadModelOrder() {
-	if r.client == nil || r.client.Setting == nil || !r.hasEntDriver() {
+	if r.client == nil || r.client.AdminSetting == nil || !r.hasEntDriver() {
 		return
 	}
 	ctx := context.Background()
 
-	settingRecord, err := r.client.Setting.Query().
-		Where(setting.KeyEQ("admin.workspace.sidebar_order")).
+	settingRecord, err := r.client.AdminSetting.Query().
+		Where(adminsetting.KeyEQ("admin.workspace.sidebar_order")).
 		Only(ctx)
-	if err != nil || settingRecord == nil {
-		settingRecord, err = r.client.Setting.Query().
-			Where(setting.KeyEQ("admin_model_order")).
-			Only(ctx)
-	}
-
 	if err != nil || settingRecord == nil {
 		// No saved order, keep registration order
 		return
@@ -48,14 +42,14 @@ func (r *Registry) normalizedModelOrder(order []string) []string {
 		if key == "" || usedKeys[key] {
 			continue
 		}
-		if _, exists := r.models[key]; exists {
+		if config, exists := r.models[key]; exists && !config.Internal {
 			newKeys = append(newKeys, key)
 			usedKeys[key] = true
 		}
 	}
 
 	for _, key := range r.modelKeys {
-		if _, exists := r.models[key]; exists && !usedKeys[key] {
+		if config, exists := r.models[key]; exists && !config.Internal && !usedKeys[key] {
 			newKeys = append(newKeys, key)
 			usedKeys[key] = true
 		}
@@ -79,8 +73,8 @@ func (r *Registry) hasEntDriver() bool {
 
 // SaveModelOrder saves the current model order to database
 func (r *Registry) SaveModelOrder(order []string) error {
-	if r.client == nil || r.client.Setting == nil || !r.hasEntDriver() {
-		return fmt.Errorf("settings client is not available")
+	if r.client == nil || r.client.AdminSetting == nil || !r.hasEntDriver() {
+		return fmt.Errorf("admin settings client is not available")
 	}
 	ctx := context.Background()
 
@@ -98,19 +92,19 @@ func (r *Registry) SaveModelOrder(order []string) error {
 	}
 
 	// Check if setting exists
-	existing, err := r.client.Setting.Query().
-		Where(setting.KeyEQ("admin.workspace.sidebar_order")).
+	existing, err := r.client.AdminSetting.Query().
+		Where(adminsetting.KeyEQ("admin.workspace.sidebar_order")).
 		Only(ctx)
 
 	if err != nil {
 		// Create new setting
-		_, err = r.client.Setting.Create().
+		_, err = r.client.AdminSetting.Create().
 			SetKey("admin.workspace.sidebar_order").
 			SetValue(string(jsonBytes)).
 			Save(ctx)
 	} else {
 		// Update existing setting
-		err = r.client.Setting.UpdateOne(existing).
+		err = r.client.AdminSetting.UpdateOne(existing).
 			SetValue(string(jsonBytes)).
 			Exec(ctx)
 	}

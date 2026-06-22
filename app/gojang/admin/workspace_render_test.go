@@ -116,6 +116,32 @@ func TestWorkspaceViewGridRendersGridShell(t *testing.T) {
 	}
 }
 
+func TestInternalResourceWorkspaceIsNotAccessible(t *testing.T) {
+	registry := &Registry{models: map[string]*ModelConfig{}}
+	registry.register(&ModelConfig{
+		Name:       "AdminSetting",
+		NamePlural: "AdminSettings",
+		Internal:   true,
+	})
+
+	renderer, err := NewAdminRenderer(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(registry, renderer, nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/adminsetting?view=grid", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("resource", "adminsetting")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	handler.Workspace(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for internal admin resource, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestLegacyRedirectUsesWorkspaceRoute(t *testing.T) {
 	handler := NewHandler(nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPost, "/admin/user", nil)

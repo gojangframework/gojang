@@ -12,8 +12,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/gojangframework/gojang/app/gojang/models/adminsetting"
 	"github.com/gojangframework/gojang/app/gojang/models/post"
-	"github.com/gojangframework/gojang/app/gojang/models/setting"
 	"github.com/gojangframework/gojang/app/gojang/models/user"
 )
 
@@ -75,9 +75,9 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			post.Table:    post.ValidColumn,
-			setting.Table: setting.ValidColumn,
-			user.Table:    user.ValidColumn,
+			adminsetting.Table: adminsetting.ValidColumn,
+			post.Table:         post.ValidColumn,
+			user.Table:         user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
