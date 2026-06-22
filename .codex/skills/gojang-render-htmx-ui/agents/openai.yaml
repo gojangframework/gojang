@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang HTMX UI"
+  short_description: "Build HTMX templates, partials, and renderers"
+  default_prompt: "Use $gojang-render-htmx-ui to build an HTMX interaction in this Gojang app."

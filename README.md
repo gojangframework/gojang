@@ -1,11 +1,14 @@
 # Gojang Framework
 
+v0.3 - New file structure - separating dev files from Gojang framework files - AI Skills added - Docs updated - addModel and addPage automations removed
+
 v0.2 - Added some changes based on what I learned from another production app that has been built on top of Gojang over the past eight months. I learned a lot about Gojang’s pros and cons, and I hope to make many improvements based on my experience running the app in production.
 
 A modern, batteries-included web framework for Go with HTMX. Build dynamic web applications with minimal JavaScript and maximum productivity.
 
 ## 🌟 Why Gojang?
 
+- **AI Skills:** Start AI development from strong boilerplate, save time and tokens - Claude and Codex compatible
 - **Batteries Included:** Authentication, admin panel, ORM, security - ready to go
 - **HTMX First:** Modern interactions without heavy JavaScript frameworks
 - **Developer Joy:** Minimal boilerplate, maximum productivity
