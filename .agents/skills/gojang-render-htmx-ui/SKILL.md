@@ -35,6 +35,8 @@ Use this skill to build public server-rendered interfaces and HTMX interactions.
 - Shared components live in `app/views/templates/components/` and define named templates.
 - Use existing renderer functions: `add`, `sub`, `lower`, `join`, `contains`, `hasPrefix`, `until`, `iterate`, `formatDate`, `formatNumber`, `toJSON`, `t`, and `tArray`.
 - Keep business logic in handlers or view-model helpers, not templates.
+- Auth templates live under `app/views/templates/auth/`; keep forgot-password, reset-password, verification, and expired-link pages generic enough to avoid account enumeration.
+- Use renderer session flash support for auth success/error messages instead of adding one-off query parameters.
 
 ## Useful References
 

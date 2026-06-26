@@ -1,6 +1,7 @@
 package renderers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -26,6 +27,20 @@ type Renderer struct {
 	mu         sync.RWMutex // Protects templates map
 	debug      bool
 	translator *i18n.Translator
+	sessions   SessionManager
+}
+
+// SessionManager is the small session API needed for flash messages.
+type SessionManager interface {
+	PopString(ctx context.Context, key string) string
+}
+
+type RendererOption func(*Renderer)
+
+func WithSessionManager(sessions SessionManager) RendererOption {
+	return func(r *Renderer) {
+		r.sessions = sessions
+	}
 }
 
 // TableData is a generic data shape for the reusable "table" component.
@@ -67,7 +82,7 @@ type TemplateData struct {
 }
 
 // NewRenderer creates a new template renderer for public site
-func NewRenderer(debug bool) (*Renderer, error) {
+func NewRenderer(debug bool, opts ...RendererOption) (*Renderer, error) {
 	translator, err := i18n.NewTranslator()
 	if err != nil {
 		return nil, fmt.Errorf("initializing translator: %w", err)
@@ -78,11 +93,16 @@ func NewRenderer(debug bool) (*Renderer, error) {
 		return nil, err
 	}
 
-	return &Renderer{
+	renderer := &Renderer{
 		templates:  tmpl,
 		debug:      debug,
 		translator: translator,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(renderer)
+	}
+
+	return renderer, nil
 }
 
 func parseTemplates(translator *i18n.Translator) (map[string]*template.Template, error) {
@@ -504,6 +524,14 @@ func (r *Renderer) prepareTemplateData(req *http.Request, data *TemplateData, fo
 	data.CurrentPath = req.URL.Path
 	if data.Lang == "" {
 		data.Lang = r.translator.DetectLanguage(req)
+	}
+	if r.sessions != nil {
+		if data.Flash == "" {
+			data.Flash = r.sessions.PopString(req.Context(), "flash")
+		}
+		if data.FlashType == "" {
+			data.FlashType = r.sessions.PopString(req.Context(), "flash_type")
+		}
 	}
 	return data
 }

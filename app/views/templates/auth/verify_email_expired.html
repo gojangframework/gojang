@@ -1,0 +1,19 @@
+{{define "title"}}{{t . "verification_link_expired_title"}}{{end}}
+
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>{{t . "verification_link_expired"}}</h2>
+        <div class="alert alert-error">
+            <p>{{t . "verification_link_expired_message"}}</p>
+        </div>
+        <form hx-post="/register-send-verification-email" hx-target="#content" hx-swap="innerHTML" class="form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            {{if .Data.Token}}
+                <input type="hidden" name="verification_token" value="{{.Data.Token}}">
+            {{end}}
+            <button type="submit" class="btn btn-primary">{{t . "resend_verification_email"}}</button>
+        </form>
+    </div>
+</div>
+{{end}}

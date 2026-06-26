@@ -1,21 +1,22 @@
 package utils
 
 import (
-	"bytes"
 	"context"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 )
 
 type sentEmail struct {
-	from string
-	to   []string
-	msg  []byte
+	msg EmailMessage
 }
 
-type fakeEmailSender struct {
+type fakeQueuedSender struct {
+	provider    string
 	mu          sync.Mutex
 	sent        []sentEmail
 	block       chan struct{}
@@ -23,7 +24,14 @@ type fakeEmailSender struct {
 	sendDone    chan struct{}
 }
 
-func (f *fakeEmailSender) SendMail(ctx context.Context, from string, to []string, msg []byte) error {
+func (f *fakeQueuedSender) Provider() string {
+	if f.provider == "" {
+		return "fake"
+	}
+	return f.provider
+}
+
+func (f *fakeQueuedSender) Send(ctx context.Context, msg *EmailMessage) error {
 	if f.sendStarted != nil {
 		select {
 		case f.sendStarted <- struct{}{}:
@@ -40,11 +48,7 @@ func (f *fakeEmailSender) SendMail(ctx context.Context, from string, to []string
 	}
 
 	f.mu.Lock()
-	f.sent = append(f.sent, sentEmail{
-		from: from,
-		to:   append([]string(nil), to...),
-		msg:  append([]byte(nil), msg...),
-	})
+	f.sent = append(f.sent, sentEmail{msg: cloneEmailMessage(msg)})
 	f.mu.Unlock()
 
 	if f.sendDone != nil {
@@ -57,21 +61,28 @@ func (f *fakeEmailSender) SendMail(ctx context.Context, from string, to []string
 	return nil
 }
 
-func (f *fakeEmailSender) last() sentEmail {
+func (f *fakeQueuedSender) last() sentEmail {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.sent[len(f.sent)-1]
 }
 
+type fakeSESSender struct {
+	sent []*sesv2.SendEmailInput
+}
+
+func (f *fakeSESSender) SendEmail(ctx context.Context, input *sesv2.SendEmailInput, optFns ...func(*sesv2.Options)) (*sesv2.SendEmailOutput, error) {
+	f.sent = append(f.sent, input)
+	return &sesv2.SendEmailOutput{MessageId: aws.String("msg-1")}, nil
+}
+
 func TestEmailServiceQueuesAndSendsEmail(t *testing.T) {
-	sender := &fakeEmailSender{sendDone: make(chan struct{}, 1)}
+	sender := &fakeQueuedSender{provider: "smtp", sendDone: make(chan struct{}, 1)}
 	service := newEmailServiceWithSender(sender, EmailConfig{
-		FromAddress:     "noreply@example.com",
-		FromDisplayName: "Gojang",
-		MaxSendRate:     100,
-		QueueSize:       4,
-		WorkerCount:     1,
-		SendTimeout:     time.Second,
+		MaxSendRate: 100,
+		QueueSize:   4,
+		WorkerCount: 1,
+		SendTimeout: time.Second,
 	})
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -96,28 +107,21 @@ func TestEmailServiceQueuesAndSendsEmail(t *testing.T) {
 		t.Fatal("timed out waiting for email to send")
 	}
 
-	got := sender.last()
-	if got.from != "noreply@example.com" {
-		t.Fatalf("from = %q, want noreply@example.com", got.from)
+	got := sender.last().msg
+	if got.Subject != "Hello" {
+		t.Fatalf("subject = %q, want Hello", got.Subject)
 	}
-	if len(got.to) != 3 {
-		t.Fatalf("recipients = %v, want To/Cc/Bcc", got.to)
-	}
-	if !bytes.Contains(got.msg, []byte("From: \"Gojang\" <noreply@example.com>")) {
-		t.Fatalf("message missing formatted From header:\n%s", string(got.msg))
-	}
-	if bytes.Contains(got.msg, []byte("Bcc:")) {
-		t.Fatalf("message should not include Bcc header:\n%s", string(got.msg))
+	if len(got.To) != 1 || got.To[0] != "user@example.com" {
+		t.Fatalf("to = %v", got.To)
 	}
 }
 
 func TestEmailServiceReturnsQueueFull(t *testing.T) {
-	sender := &fakeEmailSender{
+	sender := &fakeQueuedSender{
 		block:       make(chan struct{}),
 		sendStarted: make(chan struct{}, 1),
 	}
 	service := newEmailServiceWithSender(sender, EmailConfig{
-		FromAddress: "noreply@example.com",
 		MaxSendRate: 100,
 		QueueSize:   1,
 		WorkerCount: 1,
@@ -150,9 +154,8 @@ func TestEmailServiceReturnsQueueFull(t *testing.T) {
 }
 
 func TestEmailServiceShutdownRejectsNewEmail(t *testing.T) {
-	sender := &fakeEmailSender{}
+	sender := &fakeQueuedSender{}
 	service := newEmailServiceWithSender(sender, EmailConfig{
-		FromAddress: "noreply@example.com",
 		MaxSendRate: 100,
 		QueueSize:   1,
 		WorkerCount: 1,
@@ -171,11 +174,116 @@ func TestEmailServiceShutdownRejectsNewEmail(t *testing.T) {
 	}
 }
 
+func TestNewEmailServiceProviderSelection(t *testing.T) {
+	sender, err := newConfiguredEmailSender(EmailConfig{
+		SESAccessKeyID:      "key",
+		SESSecretAccessKey:  "secret",
+		SESRegion:           "us-east-1",
+		SESFromEmailAddress: "ses@example.com",
+		SMTPHost:            "smtp.example.com",
+		FromAddress:         "smtp@example.com",
+	})
+	if err != nil {
+		t.Fatalf("newConfiguredEmailSender() error = %v", err)
+	}
+	if sender.Provider() != "ses" {
+		t.Fatalf("provider = %q, want ses", sender.Provider())
+	}
+
+	sender, err = newConfiguredEmailSender(EmailConfig{
+		SMTPHost:    "smtp.example.com",
+		SMTPPort:    587,
+		FromAddress: "smtp@example.com",
+	})
+	if err != nil {
+		t.Fatalf("newConfiguredEmailSender() SMTP error = %v", err)
+	}
+	if sender.Provider() != "smtp" {
+		t.Fatalf("provider = %q, want smtp", sender.Provider())
+	}
+}
+
+func TestPartialSESConfigFallsBackToSMTP(t *testing.T) {
+	sender, err := newConfiguredEmailSender(EmailConfig{
+		SESAccessKeyID: "partial-key",
+		SMTPHost:       "smtp.example.com",
+		SMTPPort:       587,
+		FromAddress:    "smtp@example.com",
+	})
+	if err != nil {
+		t.Fatalf("newConfiguredEmailSender() error = %v", err)
+	}
+	if sender.Provider() != "smtp" {
+		t.Fatalf("provider = %q, want smtp", sender.Provider())
+	}
+}
+
 func TestNewEmailServiceValidatesConfig(t *testing.T) {
-	if _, err := NewEmailService(EmailConfig{FromAddress: "noreply@example.com"}); err == nil {
-		t.Fatal("NewEmailService() error = nil, want missing SMTP host error")
+	if _, err := NewEmailService(EmailConfig{}); err == nil {
+		t.Fatal("NewEmailService() error = nil, want missing provider error")
 	}
 	if _, err := NewEmailService(EmailConfig{SMTPHost: "smtp.example.com"}); err == nil {
 		t.Fatal("NewEmailService() error = nil, want missing from address error")
+	}
+}
+
+func TestSESSenderBuildsEmailInput(t *testing.T) {
+	client := &fakeSESSender{}
+	sender := &sesSender{client: client, from: "Gojang <noreply@example.com>"}
+
+	msg := &EmailMessage{
+		To:      []string{"user@example.com"},
+		Cc:      []string{"cc@example.com"},
+		Subject: "Hello",
+		Body:    "<p>Welcome</p>",
+		IsHTML:  true,
+	}
+	input := sender.buildSendEmailInput(msg)
+
+	if aws.ToString(input.FromEmailAddress) != "Gojang <noreply@example.com>" {
+		t.Fatalf("from = %q", aws.ToString(input.FromEmailAddress))
+	}
+	if got := aws.ToString(input.Content.Simple.Subject.Data); got != "Hello" {
+		t.Fatalf("subject = %q", got)
+	}
+	if got := aws.ToString(input.Content.Simple.Body.Html.Data); got != "<p>Welcome</p>" {
+		t.Fatalf("html = %q", got)
+	}
+	if len(input.Destination.ToAddresses) != 1 || input.Destination.ToAddresses[0] != "user@example.com" {
+		t.Fatalf("to = %v", input.Destination.ToAddresses)
+	}
+}
+
+func TestSendPasswordResetEmail(t *testing.T) {
+	sender := &fakeQueuedSender{sendDone: make(chan struct{}, 1)}
+	service := newEmailServiceWithSender(sender, EmailConfig{
+		MaxSendRate: 100,
+		QueueSize:   1,
+		WorkerCount: 1,
+		SendTimeout: time.Second,
+	})
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = service.Shutdown(ctx)
+	}()
+
+	resetURL := "https://app.example.com/reset-password?token=abc"
+	if err := service.SendPasswordResetEmail("user@example.com", resetURL); err != nil {
+		t.Fatalf("SendPasswordResetEmail() error = %v", err)
+	}
+
+	select {
+	case <-sender.sendDone:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for password reset email")
+	}
+
+	got := sender.last().msg
+	if got.Subject != "Gojang password reset" {
+		t.Fatalf("subject = %q", got.Subject)
+	}
+	if !strings.Contains(got.Body, resetURL) {
+		t.Fatalf("body missing reset URL: %s", got.Body)
 	}
 }

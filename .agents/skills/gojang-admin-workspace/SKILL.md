@@ -38,7 +38,7 @@ Use this skill for the staff-only admin panel and generic CRUD workspace.
 - Hash or validate sensitive values in `BeforeSave`, as the User registration does for password fields.
 - Assign current-user-owned fields in `BeforeCreate` with `middleware.GetUser(ctx)`.
 - Use `QueryModifier` to eager load relationships displayed in grid/list fields.
-- Hide sensitive generated fields such as password hashes.
+- Hide sensitive generated fields such as password hashes, email verification tokens, and password reset tokens.
 
 ## Useful References
 

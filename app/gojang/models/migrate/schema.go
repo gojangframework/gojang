@@ -58,6 +58,11 @@ var (
 		{Name: "is_active", Type: field.TypeBool, Default: true},
 		{Name: "is_staff", Type: field.TypeBool, Default: false},
 		{Name: "is_superuser", Type: field.TypeBool, Default: false},
+		{Name: "is_email_verified", Type: field.TypeBool, Default: false},
+		{Name: "email_verification_token", Type: field.TypeString, Nullable: true},
+		{Name: "email_verification_expiry", Type: field.TypeTime, Nullable: true},
+		{Name: "password_reset_token", Type: field.TypeString, Nullable: true},
+		{Name: "password_reset_expiry", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "last_login", Type: field.TypeTime, Nullable: true},
@@ -72,6 +77,16 @@ var (
 				Name:    "user_email",
 				Unique:  false,
 				Columns: []*schema.Column{UsersColumns[1]},
+			},
+			{
+				Name:    "user_email_verification_token",
+				Unique:  true,
+				Columns: []*schema.Column{UsersColumns[7]},
+			},
+			{
+				Name:    "user_password_reset_token",
+				Unique:  true,
+				Columns: []*schema.Column{UsersColumns[9]},
 			},
 		},
 	}

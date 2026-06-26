@@ -1,26 +1,26 @@
 package config
 
 import (
-	"os"
 	"testing"
 	"time"
+
+	"github.com/caarlos0/env/v9"
 )
 
 func TestConfig_DefaultValues(t *testing.T) {
-	// Set required environment variables
-	os.Setenv("DATABASE_URL", "sqlite://test.db")
-	os.Setenv("SESSION_KEY", "test-session-key-32-chars-long!")
-	defer func() {
-		os.Unsetenv("DATABASE_URL")
-		os.Unsetenv("SESSION_KEY")
-	}()
+	t.Setenv("DATABASE_URL", "sqlite://test.db")
+	t.Setenv("SESSION_KEY", "test-session-key-32-chars-long!")
 
 	cfg := &Config{}
 	cfg.Port = "8080"
 	cfg.Debug = false
+	cfg.AppBaseURL = "http://localhost:8080"
 	cfg.SessionLifetime = 12 * time.Hour
 	cfg.SMTPPort = 587
 	cfg.SMTPFrom = "noreply@localhost"
+	cfg.AWSSESRegion = "us-east-1"
+	cfg.AWSSESFromEmail = "noreply@localhost"
+	cfg.AWSSESFromDisplayName = "Gojang"
 
 	if cfg.Port != "8080" {
 		t.Errorf("Expected default port 8080, got %s", cfg.Port)
@@ -34,6 +34,10 @@ func TestConfig_DefaultValues(t *testing.T) {
 		t.Errorf("Expected session lifetime 12h, got %v", cfg.SessionLifetime)
 	}
 
+	if cfg.AppBaseURL != "http://localhost:8080" {
+		t.Errorf("Expected app base URL http://localhost:8080, got %s", cfg.AppBaseURL)
+	}
+
 	if cfg.SMTPPort != 587 {
 		t.Errorf("Expected SMTP port 587, got %d", cfg.SMTPPort)
 	}
@@ -41,20 +45,27 @@ func TestConfig_DefaultValues(t *testing.T) {
 	if cfg.SMTPFrom != "noreply@localhost" {
 		t.Errorf("Expected SMTP from noreply@localhost, got %s", cfg.SMTPFrom)
 	}
+
+	if cfg.AWSSESRegion != "us-east-1" {
+		t.Errorf("Expected AWS SES region us-east-1, got %s", cfg.AWSSESRegion)
+	}
 }
 
 func TestConfig_CustomValues(t *testing.T) {
 	cfg := &Config{
-		DatabaseURL:     "postgresql://localhost/testdb",
-		SessionKey:      "custom-session-key",
-		Debug:           true,
-		Port:            "3000",
-		SessionLifetime: 24 * time.Hour,
-		SMTPHost:        "smtp.example.com",
-		SMTPPort:        465,
-		SMTPUser:        "user@example.com",
-		SMTPPass:        "password",
-		SMTPFrom:        "custom@example.com",
+		DatabaseURL:       "postgresql://localhost/testdb",
+		SessionKey:        "custom-session-key",
+		Debug:             true,
+		Port:              "3000",
+		AppBaseURL:        "https://app.example.com",
+		SessionLifetime:   24 * time.Hour,
+		SMTPHost:          "smtp.example.com",
+		SMTPPort:          465,
+		SMTPUser:          "user@example.com",
+		SMTPPass:          "password",
+		SMTPFrom:          "custom@example.com",
+		AWSSESAccessKeyID: "AKIA_TEST",
+		AWSSESRegion:      "us-west-2",
 	}
 
 	if cfg.DatabaseURL != "postgresql://localhost/testdb" {
@@ -69,12 +80,51 @@ func TestConfig_CustomValues(t *testing.T) {
 		t.Errorf("Expected port 3000, got %s", cfg.Port)
 	}
 
+	if cfg.AppBaseURL != "https://app.example.com" {
+		t.Errorf("Expected app base URL https://app.example.com, got %s", cfg.AppBaseURL)
+	}
+
 	if cfg.SessionLifetime != 24*time.Hour {
 		t.Errorf("Expected session lifetime 24h, got %v", cfg.SessionLifetime)
 	}
 
 	if cfg.SMTPHost != "smtp.example.com" {
 		t.Errorf("Expected SMTP host smtp.example.com, got %s", cfg.SMTPHost)
+	}
+
+	if cfg.AWSSESAccessKeyID != "AKIA_TEST" {
+		t.Errorf("Expected AWS SES access key to be configured")
+	}
+}
+
+func TestConfig_SESEnvNames(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://test.db")
+	t.Setenv("SESSION_KEY", "test-session-key-32-chars-long!")
+	t.Setenv("AWS_SES_ACCESS_KEY_ID", "AKIA_SES_TEST")
+	t.Setenv("AWS_SES_SECRET_ACCESS_KEY", "ses-secret")
+	t.Setenv("AWS_SES_REGION", "us-west-2")
+	t.Setenv("AWS_SES_FROM_EMAIL_ADDRESS", "ses@example.com")
+	t.Setenv("AWS_SES_FROM_DISPLAY_NAME", "SES Sender")
+
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		t.Fatalf("env.Parse() error = %v", err)
+	}
+
+	if cfg.AWSSESAccessKeyID != "AKIA_SES_TEST" {
+		t.Fatalf("AWSSESAccessKeyID = %q", cfg.AWSSESAccessKeyID)
+	}
+	if cfg.AWSSESSecretAccessKey != "ses-secret" {
+		t.Fatalf("AWSSESSecretAccessKey was not parsed")
+	}
+	if cfg.AWSSESRegion != "us-west-2" {
+		t.Fatalf("AWSSESRegion = %q", cfg.AWSSESRegion)
+	}
+	if cfg.AWSSESFromEmail != "ses@example.com" {
+		t.Fatalf("AWSSESFromEmail = %q", cfg.AWSSESFromEmail)
+	}
+	if cfg.AWSSESFromDisplayName != "SES Sender" {
+		t.Fatalf("AWSSESFromDisplayName = %q", cfg.AWSSESFromDisplayName)
 	}
 }
 

@@ -25,6 +25,16 @@ const (
 	FieldIsStaff = "is_staff"
 	// FieldIsSuperuser holds the string denoting the is_superuser field in the database.
 	FieldIsSuperuser = "is_superuser"
+	// FieldIsEmailVerified holds the string denoting the is_email_verified field in the database.
+	FieldIsEmailVerified = "is_email_verified"
+	// FieldEmailVerificationToken holds the string denoting the email_verification_token field in the database.
+	FieldEmailVerificationToken = "email_verification_token"
+	// FieldEmailVerificationExpiry holds the string denoting the email_verification_expiry field in the database.
+	FieldEmailVerificationExpiry = "email_verification_expiry"
+	// FieldPasswordResetToken holds the string denoting the password_reset_token field in the database.
+	FieldPasswordResetToken = "password_reset_token"
+	// FieldPasswordResetExpiry holds the string denoting the password_reset_expiry field in the database.
+	FieldPasswordResetExpiry = "password_reset_expiry"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -52,6 +62,11 @@ var Columns = []string{
 	FieldIsActive,
 	FieldIsStaff,
 	FieldIsSuperuser,
+	FieldIsEmailVerified,
+	FieldEmailVerificationToken,
+	FieldEmailVerificationExpiry,
+	FieldPasswordResetToken,
+	FieldPasswordResetExpiry,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldLastLogin,
@@ -76,6 +91,8 @@ var (
 	DefaultIsStaff bool
 	// DefaultIsSuperuser holds the default value on creation for the "is_superuser" field.
 	DefaultIsSuperuser bool
+	// DefaultIsEmailVerified holds the default value on creation for the "is_email_verified" field.
+	DefaultIsEmailVerified bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -117,6 +134,31 @@ func ByIsStaff(opts ...sql.OrderTermOption) OrderOption {
 // ByIsSuperuser orders the results by the is_superuser field.
 func ByIsSuperuser(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsSuperuser, opts...).ToFunc()
+}
+
+// ByIsEmailVerified orders the results by the is_email_verified field.
+func ByIsEmailVerified(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsEmailVerified, opts...).ToFunc()
+}
+
+// ByEmailVerificationToken orders the results by the email_verification_token field.
+func ByEmailVerificationToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmailVerificationToken, opts...).ToFunc()
+}
+
+// ByEmailVerificationExpiry orders the results by the email_verification_expiry field.
+func ByEmailVerificationExpiry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmailVerificationExpiry, opts...).ToFunc()
+}
+
+// ByPasswordResetToken orders the results by the password_reset_token field.
+func ByPasswordResetToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPasswordResetToken, opts...).ToFunc()
+}
+
+// ByPasswordResetExpiry orders the results by the password_reset_expiry field.
+func ByPasswordResetExpiry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPasswordResetExpiry, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

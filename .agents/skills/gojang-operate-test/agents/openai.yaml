@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang Operate Test"
+  short_description: "Run tests, migrations, email checks, and deploy prep"
+  default_prompt: "Use $gojang-operate-test to run tests, migrations, auth email checks, or deployment checks for this Gojang app."
