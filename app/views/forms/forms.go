@@ -27,6 +27,18 @@ type RegisterForm struct {
 	PasswordConfirm string `form:"password_confirm" validate:"required,eqfield=Password"`
 }
 
+// ForgotPasswordForm represents forgot password form data.
+type ForgotPasswordForm struct {
+	Email string `form:"email" validate:"required,email"`
+}
+
+// ResetPasswordForm represents reset password form data.
+type ResetPasswordForm struct {
+	Token           string `form:"token" validate:"required"`
+	Password        string `form:"password" validate:"required"`
+	PasswordConfirm string `form:"password_confirm" validate:"required,eqfield=Password"`
+}
+
 // UserForm represents user create/update form
 type UserForm struct {
 	Email       string `form:"email" validate:"required,email"`
@@ -69,6 +81,12 @@ func Validate(form interface{}) map[string]string {
 	// Additional password complexity validation for forms with Password field
 	switch f := form.(type) {
 	case RegisterForm:
+		if f.Password != "" {
+			if err := utils.ValidatePasswordComplexity(f.Password); err != nil {
+				errors["Password"] = err.Error()
+			}
+		}
+	case ResetPasswordForm:
 		if f.Password != "" {
 			if err := utils.ValidatePasswordComplexity(f.Password); err != nil {
 				errors["Password"] = err.Error()

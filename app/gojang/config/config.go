@@ -15,6 +15,7 @@ type Config struct {
 	DevHost      string   `env:"DEVHOST" envDefault:"0.0.0.0"`
 	Port         string   `env:"PORT" envDefault:"8080"`
 	AllowedHosts []string `env:"ALLOWED_HOSTS" envSeparator:","`
+	AppBaseURL   string   `env:"APP_BASE_URL" envDefault:"http://localhost:8080"`
 
 	// Content Security Policy settings. Leave empty to use framework defaults.
 	CSPDefaultSrc               []string `env:"CSP_DEFAULT_SRC" envSeparator:","`
@@ -35,6 +36,13 @@ type Config struct {
 	SMTPUser string `env:"SMTP_USER"`
 	SMTPPass string `env:"SMTP_PASS"`
 	SMTPFrom string `env:"SMTP_FROM" envDefault:"noreply@localhost"`
+
+	// Amazon SES
+	AWSAccessKeyID     string `env:"AWS_ACCESS_KEY_ID"`
+	AWSSecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY"`
+	AWSRegion          string `env:"AWS_REGION" envDefault:"us-east-1"`
+	FromEmailAddress   string `env:"FROM_EMAIL_ADDRESS" envDefault:"noreply@localhost"`
+	FromDisplayName    string `env:"FROM_DISPLAY_NAME" envDefault:"Gojang"`
 
 	// Email queue settings
 	SMTPFromName     string        `env:"SMTP_FROM_NAME"`

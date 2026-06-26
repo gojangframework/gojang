@@ -18,9 +18,13 @@ func TestConfig_DefaultValues(t *testing.T) {
 	cfg := &Config{}
 	cfg.Port = "8080"
 	cfg.Debug = false
+	cfg.AppBaseURL = "http://localhost:8080"
 	cfg.SessionLifetime = 12 * time.Hour
 	cfg.SMTPPort = 587
 	cfg.SMTPFrom = "noreply@localhost"
+	cfg.AWSRegion = "us-east-1"
+	cfg.FromEmailAddress = "noreply@localhost"
+	cfg.FromDisplayName = "Gojang"
 
 	if cfg.Port != "8080" {
 		t.Errorf("Expected default port 8080, got %s", cfg.Port)
@@ -34,12 +38,20 @@ func TestConfig_DefaultValues(t *testing.T) {
 		t.Errorf("Expected session lifetime 12h, got %v", cfg.SessionLifetime)
 	}
 
+	if cfg.AppBaseURL != "http://localhost:8080" {
+		t.Errorf("Expected app base URL http://localhost:8080, got %s", cfg.AppBaseURL)
+	}
+
 	if cfg.SMTPPort != 587 {
 		t.Errorf("Expected SMTP port 587, got %d", cfg.SMTPPort)
 	}
 
 	if cfg.SMTPFrom != "noreply@localhost" {
 		t.Errorf("Expected SMTP from noreply@localhost, got %s", cfg.SMTPFrom)
+	}
+
+	if cfg.AWSRegion != "us-east-1" {
+		t.Errorf("Expected AWS region us-east-1, got %s", cfg.AWSRegion)
 	}
 }
 
@@ -49,12 +61,15 @@ func TestConfig_CustomValues(t *testing.T) {
 		SessionKey:      "custom-session-key",
 		Debug:           true,
 		Port:            "3000",
+		AppBaseURL:      "https://app.example.com",
 		SessionLifetime: 24 * time.Hour,
 		SMTPHost:        "smtp.example.com",
 		SMTPPort:        465,
 		SMTPUser:        "user@example.com",
 		SMTPPass:        "password",
 		SMTPFrom:        "custom@example.com",
+		AWSAccessKeyID:  "AKIA_TEST",
+		AWSRegion:       "us-west-2",
 	}
 
 	if cfg.DatabaseURL != "postgresql://localhost/testdb" {
@@ -69,12 +84,20 @@ func TestConfig_CustomValues(t *testing.T) {
 		t.Errorf("Expected port 3000, got %s", cfg.Port)
 	}
 
+	if cfg.AppBaseURL != "https://app.example.com" {
+		t.Errorf("Expected app base URL https://app.example.com, got %s", cfg.AppBaseURL)
+	}
+
 	if cfg.SessionLifetime != 24*time.Hour {
 		t.Errorf("Expected session lifetime 24h, got %v", cfg.SessionLifetime)
 	}
 
 	if cfg.SMTPHost != "smtp.example.com" {
 		t.Errorf("Expected SMTP host smtp.example.com, got %s", cfg.SMTPHost)
+	}
+
+	if cfg.AWSAccessKeyID != "AKIA_TEST" {
+		t.Errorf("Expected AWS access key to be configured")
 	}
 }
 

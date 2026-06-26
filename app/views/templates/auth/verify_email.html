@@ -1,0 +1,27 @@
+{{define "title"}}{{t . "verify_email_title"}}{{end}}
+
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>{{t . "verify_email"}}</h2>
+
+        {{if .Data.EmailSent}}
+            <div class="alert alert-success">
+                <p>{{t . "verification_email_sent"}}</p>
+            </div>
+            {{if .Data.DebugURL}}
+                <div class="alert alert-info">
+                    <p>{{t . "development_verify_link"}}</p>
+                    <a href="{{.Data.DebugURL}}">{{.Data.DebugURL}}</a>
+                </div>
+            {{end}}
+        {{end}}
+
+        <p>{{t . "verify_email_message"}} <strong>{{.Data.Email}}</strong></p>
+        <form hx-post="/register-send-verification-email" hx-target="#content" hx-swap="innerHTML" class="form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="btn btn-primary">{{t . "send_verification_email"}}</button>
+        </form>
+    </div>
+</div>
+{{end}}

@@ -982,24 +982,29 @@ func (m *PostMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	email         *string
-	password_hash *string
-	is_active     *bool
-	is_staff      *bool
-	is_superuser  *bool
-	created_at    *time.Time
-	updated_at    *time.Time
-	last_login    *time.Time
-	clearedFields map[string]struct{}
-	posts         map[uuid.UUID]struct{}
-	removedposts  map[uuid.UUID]struct{}
-	clearedposts  bool
-	done          bool
-	oldValue      func(context.Context) (*User, error)
-	predicates    []predicate.User
+	op                        Op
+	typ                       string
+	id                        *uuid.UUID
+	email                     *string
+	password_hash             *string
+	is_active                 *bool
+	is_staff                  *bool
+	is_superuser              *bool
+	is_email_verified         *bool
+	email_verification_token  *string
+	email_verification_expiry *time.Time
+	password_reset_token      *string
+	password_reset_expiry     *time.Time
+	created_at                *time.Time
+	updated_at                *time.Time
+	last_login                *time.Time
+	clearedFields             map[string]struct{}
+	posts                     map[uuid.UUID]struct{}
+	removedposts              map[uuid.UUID]struct{}
+	clearedposts              bool
+	done                      bool
+	oldValue                  func(context.Context) (*User, error)
+	predicates                []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -1286,6 +1291,238 @@ func (m *UserMutation) ResetIsSuperuser() {
 	m.is_superuser = nil
 }
 
+// SetIsEmailVerified sets the "is_email_verified" field.
+func (m *UserMutation) SetIsEmailVerified(b bool) {
+	m.is_email_verified = &b
+}
+
+// IsEmailVerified returns the value of the "is_email_verified" field in the mutation.
+func (m *UserMutation) IsEmailVerified() (r bool, exists bool) {
+	v := m.is_email_verified
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsEmailVerified returns the old "is_email_verified" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldIsEmailVerified(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsEmailVerified is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsEmailVerified requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsEmailVerified: %w", err)
+	}
+	return oldValue.IsEmailVerified, nil
+}
+
+// ResetIsEmailVerified resets all changes to the "is_email_verified" field.
+func (m *UserMutation) ResetIsEmailVerified() {
+	m.is_email_verified = nil
+}
+
+// SetEmailVerificationToken sets the "email_verification_token" field.
+func (m *UserMutation) SetEmailVerificationToken(s string) {
+	m.email_verification_token = &s
+}
+
+// EmailVerificationToken returns the value of the "email_verification_token" field in the mutation.
+func (m *UserMutation) EmailVerificationToken() (r string, exists bool) {
+	v := m.email_verification_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmailVerificationToken returns the old "email_verification_token" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldEmailVerificationToken(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmailVerificationToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmailVerificationToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmailVerificationToken: %w", err)
+	}
+	return oldValue.EmailVerificationToken, nil
+}
+
+// ClearEmailVerificationToken clears the value of the "email_verification_token" field.
+func (m *UserMutation) ClearEmailVerificationToken() {
+	m.email_verification_token = nil
+	m.clearedFields[user.FieldEmailVerificationToken] = struct{}{}
+}
+
+// EmailVerificationTokenCleared returns if the "email_verification_token" field was cleared in this mutation.
+func (m *UserMutation) EmailVerificationTokenCleared() bool {
+	_, ok := m.clearedFields[user.FieldEmailVerificationToken]
+	return ok
+}
+
+// ResetEmailVerificationToken resets all changes to the "email_verification_token" field.
+func (m *UserMutation) ResetEmailVerificationToken() {
+	m.email_verification_token = nil
+	delete(m.clearedFields, user.FieldEmailVerificationToken)
+}
+
+// SetEmailVerificationExpiry sets the "email_verification_expiry" field.
+func (m *UserMutation) SetEmailVerificationExpiry(t time.Time) {
+	m.email_verification_expiry = &t
+}
+
+// EmailVerificationExpiry returns the value of the "email_verification_expiry" field in the mutation.
+func (m *UserMutation) EmailVerificationExpiry() (r time.Time, exists bool) {
+	v := m.email_verification_expiry
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmailVerificationExpiry returns the old "email_verification_expiry" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldEmailVerificationExpiry(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmailVerificationExpiry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmailVerificationExpiry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmailVerificationExpiry: %w", err)
+	}
+	return oldValue.EmailVerificationExpiry, nil
+}
+
+// ClearEmailVerificationExpiry clears the value of the "email_verification_expiry" field.
+func (m *UserMutation) ClearEmailVerificationExpiry() {
+	m.email_verification_expiry = nil
+	m.clearedFields[user.FieldEmailVerificationExpiry] = struct{}{}
+}
+
+// EmailVerificationExpiryCleared returns if the "email_verification_expiry" field was cleared in this mutation.
+func (m *UserMutation) EmailVerificationExpiryCleared() bool {
+	_, ok := m.clearedFields[user.FieldEmailVerificationExpiry]
+	return ok
+}
+
+// ResetEmailVerificationExpiry resets all changes to the "email_verification_expiry" field.
+func (m *UserMutation) ResetEmailVerificationExpiry() {
+	m.email_verification_expiry = nil
+	delete(m.clearedFields, user.FieldEmailVerificationExpiry)
+}
+
+// SetPasswordResetToken sets the "password_reset_token" field.
+func (m *UserMutation) SetPasswordResetToken(s string) {
+	m.password_reset_token = &s
+}
+
+// PasswordResetToken returns the value of the "password_reset_token" field in the mutation.
+func (m *UserMutation) PasswordResetToken() (r string, exists bool) {
+	v := m.password_reset_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPasswordResetToken returns the old "password_reset_token" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldPasswordResetToken(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPasswordResetToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPasswordResetToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPasswordResetToken: %w", err)
+	}
+	return oldValue.PasswordResetToken, nil
+}
+
+// ClearPasswordResetToken clears the value of the "password_reset_token" field.
+func (m *UserMutation) ClearPasswordResetToken() {
+	m.password_reset_token = nil
+	m.clearedFields[user.FieldPasswordResetToken] = struct{}{}
+}
+
+// PasswordResetTokenCleared returns if the "password_reset_token" field was cleared in this mutation.
+func (m *UserMutation) PasswordResetTokenCleared() bool {
+	_, ok := m.clearedFields[user.FieldPasswordResetToken]
+	return ok
+}
+
+// ResetPasswordResetToken resets all changes to the "password_reset_token" field.
+func (m *UserMutation) ResetPasswordResetToken() {
+	m.password_reset_token = nil
+	delete(m.clearedFields, user.FieldPasswordResetToken)
+}
+
+// SetPasswordResetExpiry sets the "password_reset_expiry" field.
+func (m *UserMutation) SetPasswordResetExpiry(t time.Time) {
+	m.password_reset_expiry = &t
+}
+
+// PasswordResetExpiry returns the value of the "password_reset_expiry" field in the mutation.
+func (m *UserMutation) PasswordResetExpiry() (r time.Time, exists bool) {
+	v := m.password_reset_expiry
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPasswordResetExpiry returns the old "password_reset_expiry" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldPasswordResetExpiry(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPasswordResetExpiry is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPasswordResetExpiry requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPasswordResetExpiry: %w", err)
+	}
+	return oldValue.PasswordResetExpiry, nil
+}
+
+// ClearPasswordResetExpiry clears the value of the "password_reset_expiry" field.
+func (m *UserMutation) ClearPasswordResetExpiry() {
+	m.password_reset_expiry = nil
+	m.clearedFields[user.FieldPasswordResetExpiry] = struct{}{}
+}
+
+// PasswordResetExpiryCleared returns if the "password_reset_expiry" field was cleared in this mutation.
+func (m *UserMutation) PasswordResetExpiryCleared() bool {
+	_, ok := m.clearedFields[user.FieldPasswordResetExpiry]
+	return ok
+}
+
+// ResetPasswordResetExpiry resets all changes to the "password_reset_expiry" field.
+func (m *UserMutation) ResetPasswordResetExpiry() {
+	m.password_reset_expiry = nil
+	delete(m.clearedFields, user.FieldPasswordResetExpiry)
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *UserMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -1495,7 +1732,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 13)
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
 	}
@@ -1510,6 +1747,21 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.is_superuser != nil {
 		fields = append(fields, user.FieldIsSuperuser)
+	}
+	if m.is_email_verified != nil {
+		fields = append(fields, user.FieldIsEmailVerified)
+	}
+	if m.email_verification_token != nil {
+		fields = append(fields, user.FieldEmailVerificationToken)
+	}
+	if m.email_verification_expiry != nil {
+		fields = append(fields, user.FieldEmailVerificationExpiry)
+	}
+	if m.password_reset_token != nil {
+		fields = append(fields, user.FieldPasswordResetToken)
+	}
+	if m.password_reset_expiry != nil {
+		fields = append(fields, user.FieldPasswordResetExpiry)
 	}
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
@@ -1538,6 +1790,16 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.IsStaff()
 	case user.FieldIsSuperuser:
 		return m.IsSuperuser()
+	case user.FieldIsEmailVerified:
+		return m.IsEmailVerified()
+	case user.FieldEmailVerificationToken:
+		return m.EmailVerificationToken()
+	case user.FieldEmailVerificationExpiry:
+		return m.EmailVerificationExpiry()
+	case user.FieldPasswordResetToken:
+		return m.PasswordResetToken()
+	case user.FieldPasswordResetExpiry:
+		return m.PasswordResetExpiry()
 	case user.FieldCreatedAt:
 		return m.CreatedAt()
 	case user.FieldUpdatedAt:
@@ -1563,6 +1825,16 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldIsStaff(ctx)
 	case user.FieldIsSuperuser:
 		return m.OldIsSuperuser(ctx)
+	case user.FieldIsEmailVerified:
+		return m.OldIsEmailVerified(ctx)
+	case user.FieldEmailVerificationToken:
+		return m.OldEmailVerificationToken(ctx)
+	case user.FieldEmailVerificationExpiry:
+		return m.OldEmailVerificationExpiry(ctx)
+	case user.FieldPasswordResetToken:
+		return m.OldPasswordResetToken(ctx)
+	case user.FieldPasswordResetExpiry:
+		return m.OldPasswordResetExpiry(ctx)
 	case user.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case user.FieldUpdatedAt:
@@ -1612,6 +1884,41 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsSuperuser(v)
+		return nil
+	case user.FieldIsEmailVerified:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsEmailVerified(v)
+		return nil
+	case user.FieldEmailVerificationToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmailVerificationToken(v)
+		return nil
+	case user.FieldEmailVerificationExpiry:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmailVerificationExpiry(v)
+		return nil
+	case user.FieldPasswordResetToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPasswordResetToken(v)
+		return nil
+	case user.FieldPasswordResetExpiry:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPasswordResetExpiry(v)
 		return nil
 	case user.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -1664,6 +1971,18 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *UserMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(user.FieldEmailVerificationToken) {
+		fields = append(fields, user.FieldEmailVerificationToken)
+	}
+	if m.FieldCleared(user.FieldEmailVerificationExpiry) {
+		fields = append(fields, user.FieldEmailVerificationExpiry)
+	}
+	if m.FieldCleared(user.FieldPasswordResetToken) {
+		fields = append(fields, user.FieldPasswordResetToken)
+	}
+	if m.FieldCleared(user.FieldPasswordResetExpiry) {
+		fields = append(fields, user.FieldPasswordResetExpiry)
+	}
 	if m.FieldCleared(user.FieldLastLogin) {
 		fields = append(fields, user.FieldLastLogin)
 	}
@@ -1681,6 +2000,18 @@ func (m *UserMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UserMutation) ClearField(name string) error {
 	switch name {
+	case user.FieldEmailVerificationToken:
+		m.ClearEmailVerificationToken()
+		return nil
+	case user.FieldEmailVerificationExpiry:
+		m.ClearEmailVerificationExpiry()
+		return nil
+	case user.FieldPasswordResetToken:
+		m.ClearPasswordResetToken()
+		return nil
+	case user.FieldPasswordResetExpiry:
+		m.ClearPasswordResetExpiry()
+		return nil
 	case user.FieldLastLogin:
 		m.ClearLastLogin()
 		return nil
@@ -1706,6 +2037,21 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldIsSuperuser:
 		m.ResetIsSuperuser()
+		return nil
+	case user.FieldIsEmailVerified:
+		m.ResetIsEmailVerified()
+		return nil
+	case user.FieldEmailVerificationToken:
+		m.ResetEmailVerificationToken()
+		return nil
+	case user.FieldEmailVerificationExpiry:
+		m.ResetEmailVerificationExpiry()
+		return nil
+	case user.FieldPasswordResetToken:
+		m.ResetPasswordResetToken()
+		return nil
+	case user.FieldPasswordResetExpiry:
+		m.ResetPasswordResetExpiry()
 		return nil
 	case user.FieldCreatedAt:
 		m.ResetCreatedAt()

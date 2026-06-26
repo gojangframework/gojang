@@ -45,10 +45,28 @@ func RequireAuth(sm *scs.SessionManager, client *models.Client) func(http.Handle
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
+			if !user.IsEmailVerified && !isEmailVerificationPath(r.URL.Path) {
+				if r.Header.Get("HX-Request") == "true" {
+					w.Header().Set("HX-Redirect", "/register-verify-email")
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				http.Redirect(w, r, "/register-verify-email", http.StatusSeeOther)
+				return
+			}
 
 			ctx := context.WithValue(r.Context(), userContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
+	}
+}
+
+func isEmailVerificationPath(path string) bool {
+	switch path {
+	case "/register-verify-email", "/register-send-verification-email", "/verify-email", "/logout":
+		return true
+	default:
+		return false
 	}
 }
 

@@ -76,6 +76,76 @@ func (_c *UserCreate) SetNillableIsSuperuser(v *bool) *UserCreate {
 	return _c
 }
 
+// SetIsEmailVerified sets the "is_email_verified" field.
+func (_c *UserCreate) SetIsEmailVerified(v bool) *UserCreate {
+	_c.mutation.SetIsEmailVerified(v)
+	return _c
+}
+
+// SetNillableIsEmailVerified sets the "is_email_verified" field if the given value is not nil.
+func (_c *UserCreate) SetNillableIsEmailVerified(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetIsEmailVerified(*v)
+	}
+	return _c
+}
+
+// SetEmailVerificationToken sets the "email_verification_token" field.
+func (_c *UserCreate) SetEmailVerificationToken(v string) *UserCreate {
+	_c.mutation.SetEmailVerificationToken(v)
+	return _c
+}
+
+// SetNillableEmailVerificationToken sets the "email_verification_token" field if the given value is not nil.
+func (_c *UserCreate) SetNillableEmailVerificationToken(v *string) *UserCreate {
+	if v != nil {
+		_c.SetEmailVerificationToken(*v)
+	}
+	return _c
+}
+
+// SetEmailVerificationExpiry sets the "email_verification_expiry" field.
+func (_c *UserCreate) SetEmailVerificationExpiry(v time.Time) *UserCreate {
+	_c.mutation.SetEmailVerificationExpiry(v)
+	return _c
+}
+
+// SetNillableEmailVerificationExpiry sets the "email_verification_expiry" field if the given value is not nil.
+func (_c *UserCreate) SetNillableEmailVerificationExpiry(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetEmailVerificationExpiry(*v)
+	}
+	return _c
+}
+
+// SetPasswordResetToken sets the "password_reset_token" field.
+func (_c *UserCreate) SetPasswordResetToken(v string) *UserCreate {
+	_c.mutation.SetPasswordResetToken(v)
+	return _c
+}
+
+// SetNillablePasswordResetToken sets the "password_reset_token" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePasswordResetToken(v *string) *UserCreate {
+	if v != nil {
+		_c.SetPasswordResetToken(*v)
+	}
+	return _c
+}
+
+// SetPasswordResetExpiry sets the "password_reset_expiry" field.
+func (_c *UserCreate) SetPasswordResetExpiry(v time.Time) *UserCreate {
+	_c.mutation.SetPasswordResetExpiry(v)
+	return _c
+}
+
+// SetNillablePasswordResetExpiry sets the "password_reset_expiry" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePasswordResetExpiry(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetPasswordResetExpiry(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserCreate) SetCreatedAt(v time.Time) *UserCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -194,6 +264,10 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultIsSuperuser
 		_c.mutation.SetIsSuperuser(v)
 	}
+	if _, ok := _c.mutation.IsEmailVerified(); !ok {
+		v := user.DefaultIsEmailVerified
+		_c.mutation.SetIsEmailVerified(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := user.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -229,6 +303,9 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsSuperuser(); !ok {
 		return &ValidationError{Name: "is_superuser", err: errors.New(`models: missing required field "User.is_superuser"`)}
+	}
+	if _, ok := _c.mutation.IsEmailVerified(); !ok {
+		return &ValidationError{Name: "is_email_verified", err: errors.New(`models: missing required field "User.is_email_verified"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`models: missing required field "User.created_at"`)}
@@ -290,6 +367,26 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsSuperuser(); ok {
 		_spec.SetField(user.FieldIsSuperuser, field.TypeBool, value)
 		_node.IsSuperuser = value
+	}
+	if value, ok := _c.mutation.IsEmailVerified(); ok {
+		_spec.SetField(user.FieldIsEmailVerified, field.TypeBool, value)
+		_node.IsEmailVerified = value
+	}
+	if value, ok := _c.mutation.EmailVerificationToken(); ok {
+		_spec.SetField(user.FieldEmailVerificationToken, field.TypeString, value)
+		_node.EmailVerificationToken = &value
+	}
+	if value, ok := _c.mutation.EmailVerificationExpiry(); ok {
+		_spec.SetField(user.FieldEmailVerificationExpiry, field.TypeTime, value)
+		_node.EmailVerificationExpiry = &value
+	}
+	if value, ok := _c.mutation.PasswordResetToken(); ok {
+		_spec.SetField(user.FieldPasswordResetToken, field.TypeString, value)
+		_node.PasswordResetToken = &value
+	}
+	if value, ok := _c.mutation.PasswordResetExpiry(); ok {
+		_spec.SetField(user.FieldPasswordResetExpiry, field.TypeTime, value)
+		_node.PasswordResetExpiry = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)

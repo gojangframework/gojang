@@ -28,6 +28,16 @@ type User struct {
 	IsStaff bool `json:"is_staff,omitempty"`
 	// IsSuperuser holds the value of the "is_superuser" field.
 	IsSuperuser bool `json:"is_superuser,omitempty"`
+	// IsEmailVerified holds the value of the "is_email_verified" field.
+	IsEmailVerified bool `json:"is_email_verified,omitempty"`
+	// EmailVerificationToken holds the value of the "email_verification_token" field.
+	EmailVerificationToken *string `json:"-"`
+	// EmailVerificationExpiry holds the value of the "email_verification_expiry" field.
+	EmailVerificationExpiry *time.Time `json:"email_verification_expiry,omitempty"`
+	// PasswordResetToken holds the value of the "password_reset_token" field.
+	PasswordResetToken *string `json:"-"`
+	// PasswordResetExpiry holds the value of the "password_reset_expiry" field.
+	PasswordResetExpiry *time.Time `json:"password_reset_expiry,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -63,11 +73,11 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldIsActive, user.FieldIsStaff, user.FieldIsSuperuser:
+		case user.FieldIsActive, user.FieldIsStaff, user.FieldIsSuperuser, user.FieldIsEmailVerified:
 			values[i] = new(sql.NullBool)
-		case user.FieldEmail, user.FieldPasswordHash:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldEmailVerificationToken, user.FieldPasswordResetToken:
 			values[i] = new(sql.NullString)
-		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldLastLogin:
+		case user.FieldEmailVerificationExpiry, user.FieldPasswordResetExpiry, user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldLastLogin:
 			values[i] = new(sql.NullTime)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
@@ -121,6 +131,40 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_superuser", values[i])
 			} else if value.Valid {
 				_m.IsSuperuser = value.Bool
+			}
+		case user.FieldIsEmailVerified:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_email_verified", values[i])
+			} else if value.Valid {
+				_m.IsEmailVerified = value.Bool
+			}
+		case user.FieldEmailVerificationToken:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field email_verification_token", values[i])
+			} else if value.Valid {
+				_m.EmailVerificationToken = new(string)
+				*_m.EmailVerificationToken = value.String
+			}
+		case user.FieldEmailVerificationExpiry:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field email_verification_expiry", values[i])
+			} else if value.Valid {
+				_m.EmailVerificationExpiry = new(time.Time)
+				*_m.EmailVerificationExpiry = value.Time
+			}
+		case user.FieldPasswordResetToken:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field password_reset_token", values[i])
+			} else if value.Valid {
+				_m.PasswordResetToken = new(string)
+				*_m.PasswordResetToken = value.String
+			}
+		case user.FieldPasswordResetExpiry:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field password_reset_expiry", values[i])
+			} else if value.Valid {
+				_m.PasswordResetExpiry = new(time.Time)
+				*_m.PasswordResetExpiry = value.Time
 			}
 		case user.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -195,6 +239,23 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_superuser=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsSuperuser))
+	builder.WriteString(", ")
+	builder.WriteString("is_email_verified=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsEmailVerified))
+	builder.WriteString(", ")
+	builder.WriteString("email_verification_token=<sensitive>")
+	builder.WriteString(", ")
+	if v := _m.EmailVerificationExpiry; v != nil {
+		builder.WriteString("email_verification_expiry=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("password_reset_token=<sensitive>")
+	builder.WriteString(", ")
+	if v := _m.PasswordResetExpiry; v != nil {
+		builder.WriteString("password_reset_expiry=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

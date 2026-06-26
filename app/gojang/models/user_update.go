@@ -100,6 +100,100 @@ func (_u *UserUpdate) SetNillableIsSuperuser(v *bool) *UserUpdate {
 	return _u
 }
 
+// SetIsEmailVerified sets the "is_email_verified" field.
+func (_u *UserUpdate) SetIsEmailVerified(v bool) *UserUpdate {
+	_u.mutation.SetIsEmailVerified(v)
+	return _u
+}
+
+// SetNillableIsEmailVerified sets the "is_email_verified" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableIsEmailVerified(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetIsEmailVerified(*v)
+	}
+	return _u
+}
+
+// SetEmailVerificationToken sets the "email_verification_token" field.
+func (_u *UserUpdate) SetEmailVerificationToken(v string) *UserUpdate {
+	_u.mutation.SetEmailVerificationToken(v)
+	return _u
+}
+
+// SetNillableEmailVerificationToken sets the "email_verification_token" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableEmailVerificationToken(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetEmailVerificationToken(*v)
+	}
+	return _u
+}
+
+// ClearEmailVerificationToken clears the value of the "email_verification_token" field.
+func (_u *UserUpdate) ClearEmailVerificationToken() *UserUpdate {
+	_u.mutation.ClearEmailVerificationToken()
+	return _u
+}
+
+// SetEmailVerificationExpiry sets the "email_verification_expiry" field.
+func (_u *UserUpdate) SetEmailVerificationExpiry(v time.Time) *UserUpdate {
+	_u.mutation.SetEmailVerificationExpiry(v)
+	return _u
+}
+
+// SetNillableEmailVerificationExpiry sets the "email_verification_expiry" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableEmailVerificationExpiry(v *time.Time) *UserUpdate {
+	if v != nil {
+		_u.SetEmailVerificationExpiry(*v)
+	}
+	return _u
+}
+
+// ClearEmailVerificationExpiry clears the value of the "email_verification_expiry" field.
+func (_u *UserUpdate) ClearEmailVerificationExpiry() *UserUpdate {
+	_u.mutation.ClearEmailVerificationExpiry()
+	return _u
+}
+
+// SetPasswordResetToken sets the "password_reset_token" field.
+func (_u *UserUpdate) SetPasswordResetToken(v string) *UserUpdate {
+	_u.mutation.SetPasswordResetToken(v)
+	return _u
+}
+
+// SetNillablePasswordResetToken sets the "password_reset_token" field if the given value is not nil.
+func (_u *UserUpdate) SetNillablePasswordResetToken(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetPasswordResetToken(*v)
+	}
+	return _u
+}
+
+// ClearPasswordResetToken clears the value of the "password_reset_token" field.
+func (_u *UserUpdate) ClearPasswordResetToken() *UserUpdate {
+	_u.mutation.ClearPasswordResetToken()
+	return _u
+}
+
+// SetPasswordResetExpiry sets the "password_reset_expiry" field.
+func (_u *UserUpdate) SetPasswordResetExpiry(v time.Time) *UserUpdate {
+	_u.mutation.SetPasswordResetExpiry(v)
+	return _u
+}
+
+// SetNillablePasswordResetExpiry sets the "password_reset_expiry" field if the given value is not nil.
+func (_u *UserUpdate) SetNillablePasswordResetExpiry(v *time.Time) *UserUpdate {
+	if v != nil {
+		_u.SetPasswordResetExpiry(*v)
+	}
+	return _u
+}
+
+// ClearPasswordResetExpiry clears the value of the "password_reset_expiry" field.
+func (_u *UserUpdate) ClearPasswordResetExpiry() *UserUpdate {
+	_u.mutation.ClearPasswordResetExpiry()
+	return _u
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *UserUpdate) SetUpdatedAt(v time.Time) *UserUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -239,6 +333,33 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.IsSuperuser(); ok {
 		_spec.SetField(user.FieldIsSuperuser, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsEmailVerified(); ok {
+		_spec.SetField(user.FieldIsEmailVerified, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EmailVerificationToken(); ok {
+		_spec.SetField(user.FieldEmailVerificationToken, field.TypeString, value)
+	}
+	if _u.mutation.EmailVerificationTokenCleared() {
+		_spec.ClearField(user.FieldEmailVerificationToken, field.TypeString)
+	}
+	if value, ok := _u.mutation.EmailVerificationExpiry(); ok {
+		_spec.SetField(user.FieldEmailVerificationExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.EmailVerificationExpiryCleared() {
+		_spec.ClearField(user.FieldEmailVerificationExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PasswordResetToken(); ok {
+		_spec.SetField(user.FieldPasswordResetToken, field.TypeString, value)
+	}
+	if _u.mutation.PasswordResetTokenCleared() {
+		_spec.ClearField(user.FieldPasswordResetToken, field.TypeString)
+	}
+	if value, ok := _u.mutation.PasswordResetExpiry(); ok {
+		_spec.SetField(user.FieldPasswordResetExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.PasswordResetExpiryCleared() {
+		_spec.ClearField(user.FieldPasswordResetExpiry, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
@@ -381,6 +502,100 @@ func (_u *UserUpdateOne) SetNillableIsSuperuser(v *bool) *UserUpdateOne {
 	if v != nil {
 		_u.SetIsSuperuser(*v)
 	}
+	return _u
+}
+
+// SetIsEmailVerified sets the "is_email_verified" field.
+func (_u *UserUpdateOne) SetIsEmailVerified(v bool) *UserUpdateOne {
+	_u.mutation.SetIsEmailVerified(v)
+	return _u
+}
+
+// SetNillableIsEmailVerified sets the "is_email_verified" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableIsEmailVerified(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetIsEmailVerified(*v)
+	}
+	return _u
+}
+
+// SetEmailVerificationToken sets the "email_verification_token" field.
+func (_u *UserUpdateOne) SetEmailVerificationToken(v string) *UserUpdateOne {
+	_u.mutation.SetEmailVerificationToken(v)
+	return _u
+}
+
+// SetNillableEmailVerificationToken sets the "email_verification_token" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableEmailVerificationToken(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetEmailVerificationToken(*v)
+	}
+	return _u
+}
+
+// ClearEmailVerificationToken clears the value of the "email_verification_token" field.
+func (_u *UserUpdateOne) ClearEmailVerificationToken() *UserUpdateOne {
+	_u.mutation.ClearEmailVerificationToken()
+	return _u
+}
+
+// SetEmailVerificationExpiry sets the "email_verification_expiry" field.
+func (_u *UserUpdateOne) SetEmailVerificationExpiry(v time.Time) *UserUpdateOne {
+	_u.mutation.SetEmailVerificationExpiry(v)
+	return _u
+}
+
+// SetNillableEmailVerificationExpiry sets the "email_verification_expiry" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableEmailVerificationExpiry(v *time.Time) *UserUpdateOne {
+	if v != nil {
+		_u.SetEmailVerificationExpiry(*v)
+	}
+	return _u
+}
+
+// ClearEmailVerificationExpiry clears the value of the "email_verification_expiry" field.
+func (_u *UserUpdateOne) ClearEmailVerificationExpiry() *UserUpdateOne {
+	_u.mutation.ClearEmailVerificationExpiry()
+	return _u
+}
+
+// SetPasswordResetToken sets the "password_reset_token" field.
+func (_u *UserUpdateOne) SetPasswordResetToken(v string) *UserUpdateOne {
+	_u.mutation.SetPasswordResetToken(v)
+	return _u
+}
+
+// SetNillablePasswordResetToken sets the "password_reset_token" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillablePasswordResetToken(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetPasswordResetToken(*v)
+	}
+	return _u
+}
+
+// ClearPasswordResetToken clears the value of the "password_reset_token" field.
+func (_u *UserUpdateOne) ClearPasswordResetToken() *UserUpdateOne {
+	_u.mutation.ClearPasswordResetToken()
+	return _u
+}
+
+// SetPasswordResetExpiry sets the "password_reset_expiry" field.
+func (_u *UserUpdateOne) SetPasswordResetExpiry(v time.Time) *UserUpdateOne {
+	_u.mutation.SetPasswordResetExpiry(v)
+	return _u
+}
+
+// SetNillablePasswordResetExpiry sets the "password_reset_expiry" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillablePasswordResetExpiry(v *time.Time) *UserUpdateOne {
+	if v != nil {
+		_u.SetPasswordResetExpiry(*v)
+	}
+	return _u
+}
+
+// ClearPasswordResetExpiry clears the value of the "password_reset_expiry" field.
+func (_u *UserUpdateOne) ClearPasswordResetExpiry() *UserUpdateOne {
+	_u.mutation.ClearPasswordResetExpiry()
 	return _u
 }
 
@@ -553,6 +768,33 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.IsSuperuser(); ok {
 		_spec.SetField(user.FieldIsSuperuser, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.IsEmailVerified(); ok {
+		_spec.SetField(user.FieldIsEmailVerified, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.EmailVerificationToken(); ok {
+		_spec.SetField(user.FieldEmailVerificationToken, field.TypeString, value)
+	}
+	if _u.mutation.EmailVerificationTokenCleared() {
+		_spec.ClearField(user.FieldEmailVerificationToken, field.TypeString)
+	}
+	if value, ok := _u.mutation.EmailVerificationExpiry(); ok {
+		_spec.SetField(user.FieldEmailVerificationExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.EmailVerificationExpiryCleared() {
+		_spec.ClearField(user.FieldEmailVerificationExpiry, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PasswordResetToken(); ok {
+		_spec.SetField(user.FieldPasswordResetToken, field.TypeString, value)
+	}
+	if _u.mutation.PasswordResetTokenCleared() {
+		_spec.ClearField(user.FieldPasswordResetToken, field.TypeString)
+	}
+	if value, ok := _u.mutation.PasswordResetExpiry(); ok {
+		_spec.SetField(user.FieldPasswordResetExpiry, field.TypeTime, value)
+	}
+	if _u.mutation.PasswordResetExpiryCleared() {
+		_spec.ClearField(user.FieldPasswordResetExpiry, field.TypeTime)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)

@@ -62,20 +62,29 @@ func main() {
 	// Setup session manager
 	sessionManager := middleware.NewSessionManager(cfg)
 
-	// Setup email service when SMTP is configured.
+	// Setup email service when SES or SMTP is configured.
 	var emailService *utils.EmailService
-	if strings.TrimSpace(cfg.SMTPHost) != "" {
+	sesConfigured := strings.TrimSpace(cfg.AWSAccessKeyID) != "" &&
+		strings.TrimSpace(cfg.AWSSecretAccessKey) != "" &&
+		strings.TrimSpace(cfg.FromEmailAddress) != ""
+	smtpConfigured := strings.TrimSpace(cfg.SMTPHost) != ""
+	if sesConfigured || smtpConfigured {
 		emailService, err = utils.NewEmailService(utils.EmailConfig{
-			SMTPHost:        cfg.SMTPHost,
-			SMTPPort:        cfg.SMTPPort,
-			SMTPUser:        cfg.SMTPUser,
-			SMTPPass:        cfg.SMTPPass,
-			FromAddress:     cfg.SMTPFrom,
-			FromDisplayName: cfg.SMTPFromName,
-			MaxSendRate:     cfg.EmailSendRate,
-			QueueSize:       cfg.EmailQueueSize,
-			WorkerCount:     cfg.EmailWorkerCount,
-			SendTimeout:     cfg.EmailSendTimeout,
+			SMTPHost:           cfg.SMTPHost,
+			SMTPPort:           cfg.SMTPPort,
+			SMTPUser:           cfg.SMTPUser,
+			SMTPPass:           cfg.SMTPPass,
+			FromAddress:        cfg.SMTPFrom,
+			FromDisplayName:    cfg.SMTPFromName,
+			AWSAccessKeyID:     cfg.AWSAccessKeyID,
+			AWSSecretAccessKey: cfg.AWSSecretAccessKey,
+			AWSRegion:          cfg.AWSRegion,
+			FromEmailAddress:   cfg.FromEmailAddress,
+			SESFromDisplayName: cfg.FromDisplayName,
+			MaxSendRate:        cfg.EmailSendRate,
+			QueueSize:          cfg.EmailQueueSize,
+			WorkerCount:        cfg.EmailWorkerCount,
+			SendTimeout:        cfg.EmailSendTimeout,
 		})
 		if err != nil {
 			utils.Errorf("Failed to setup email service: %v", err)
@@ -88,14 +97,14 @@ func main() {
 				utils.Warnw("email.shutdown_incomplete", "error", err)
 			}
 		}()
-		utils.Infof("Email service configured")
+		utils.Infof("Email service configured with %s provider", emailService.Provider())
 	} else {
-		utils.Warnf("Email service disabled: SMTP_HOST is not configured")
+		utils.Warnf("Email service disabled: SES and SMTP are not configured")
 	}
 
 	// Setup renderers
 	// Public renderer: Handles public site pages with base.html wrapper
-	publicRenderer, err := renderers.NewRenderer(cfg.Debug)
+	publicRenderer, err := renderers.NewRenderer(cfg.Debug, renderers.WithSessionManager(sessionManager))
 	if err != nil {
 		utils.Errorf("Failed to setup public renderer: %v", err)
 		os.Exit(1)
@@ -109,7 +118,7 @@ func main() {
 	}
 
 	// Setup handlers
-	authHandler := handlers.NewAuthHandler(client, sessionManager, publicRenderer)
+	authHandler := handlers.NewAuthHandler(client, sessionManager, publicRenderer, emailService, cfg.AppBaseURL, cfg.Debug)
 	userHandler := handlers.NewUserHandler(client, publicRenderer)
 	postHandler := posts.NewPostHandler(client, publicRenderer)
 	pageHandler := pages.NewPageHandler(publicRenderer)
@@ -166,9 +175,16 @@ func main() {
 	r.Group(func(auth chi.Router) {
 		auth.Get("/login", authHandler.LoginGET)
 		auth.With(middleware.RateLimit(authLimiter)).Post("/login", authHandler.LoginPOST)
+		auth.Get("/forgot-password", authHandler.ForgotPasswordGET)
+		auth.With(middleware.RateLimit(authLimiter)).Post("/forgot-password", authHandler.ForgotPasswordPOST)
+		auth.Get("/reset-password", authHandler.ResetPasswordGET)
+		auth.With(middleware.RateLimit(authLimiter)).Post("/reset-password", authHandler.ResetPasswordPOST)
 		auth.Get("/register", authHandler.RegisterGET)
 		auth.With(middleware.RateLimit(authLimiter)).Post("/register", authHandler.RegisterPOST)
-		auth.Post("/logout", authHandler.LogoutPOST)
+		auth.With(middleware.RateLimit(authLimiter)).Post("/logout", authHandler.LogoutPOST)
+		auth.Get("/register-verify-email", authHandler.RegisterVerifyEmailGET)
+		auth.With(middleware.RateLimit(authLimiter)).Post("/register-send-verification-email", authHandler.RegisterSendVerificationEmailPOST)
+		auth.Get("/verify-email", authHandler.VerifyEmailGET)
 	})
 
 	// Mount routes (organized by resource)

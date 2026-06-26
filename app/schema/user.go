@@ -31,6 +31,22 @@ func (User) Fields() []ent.Field {
 			Default(false),
 		field.Bool("is_superuser").
 			Default(false),
+		field.Bool("is_email_verified").
+			Default(false),
+		field.String("email_verification_token").
+			Optional().
+			Nillable().
+			Sensitive(),
+		field.Time("email_verification_expiry").
+			Optional().
+			Nillable(),
+		field.String("password_reset_token").
+			Optional().
+			Nillable().
+			Sensitive(),
+		field.Time("password_reset_expiry").
+			Optional().
+			Nillable(),
 		field.Time("created_at").
 			Default(time.Now).
 			Immutable(),
@@ -54,5 +70,9 @@ func (User) Edges() []ent.Edge {
 func (User) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("email"),
+		index.Fields("email_verification_token").
+			Unique(),
+		index.Fields("password_reset_token").
+			Unique(),
 	}
 }
