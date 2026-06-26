@@ -1,5 +1,7 @@
 # Gojang Framework
 
+v0.3.1 - Email verification for new registration, forgot/reset password process, AWS SES email implemntation
+
 v0.3 - New file structure - separating dev files from Gojang framework files - AI Skills added - Docs updated - addModel and addPage automations removed - Ent schema files moved to more convenient location
 
 v0.2 - Added some changes based on what I learned from another production app that has been built on top of Gojang over the past eight months. I learned a lot about Gojang’s pros and cons, and I hope to make many improvements based on my experience running the app in production.
