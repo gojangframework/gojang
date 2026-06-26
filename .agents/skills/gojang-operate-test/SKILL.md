@@ -53,7 +53,17 @@ go run ./app/cmd/seed/main.go
 - Local config comes from `.env`; example defaults live in `.env.example`.
 - Server address is built from `DEVHOST` and `PORT`.
 - SQLite and PostgreSQL are supported through `DATABASE_URL`.
-- SMTP is optional; the email service is disabled when `SMTP_HOST` is empty.
+- Auth email links use `APP_BASE_URL`.
+- Email delivery uses SES first when `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY`, `AWS_SES_REGION`, and `AWS_SES_FROM_EMAIL_ADDRESS` are configured.
+- SMTP remains the fallback when SES is incomplete and `SMTP_HOST` is configured.
+- The email service is disabled only when neither SES nor SMTP is configured.
+
+## Auth Email Test Checklist
+
+- Cover registration auto-sending verification, unverified login redirecting without resend, resend token reuse, expired-link resend, successful verification token clearing, and protected route redirects for unverified users.
+- Cover forgot-password generic success for unknown email, active-user reset email, invalid or expired reset pages, successful reset clearing tokens and verifying email, and reset token reuse failure.
+- Cover SES message construction, SMTP fallback, provider precedence, full queue behavior, shutdown behavior, and password-reset email content.
+- Run `go test ./app/gojang/http/handlers`, `go test ./app/gojang/http/middleware`, `go test ./app/gojang/utils`, and `go test ./...` after auth email changes.
 
 ## Useful References
 

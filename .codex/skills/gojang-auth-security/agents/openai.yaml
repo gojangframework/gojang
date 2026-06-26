@@ -1,4 +1,0 @@
-interface:
-  display_name: "Gojang Auth Security"
-  short_description: "Apply auth, authorization, and security middleware"
-  default_prompt: "Use $gojang-auth-security to protect a route or review authentication in this Gojang app."

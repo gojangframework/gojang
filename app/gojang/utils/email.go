@@ -29,11 +29,11 @@ type EmailConfig struct {
 	FromAddress     string
 	FromDisplayName string
 
-	AWSAccessKeyID     string
-	AWSSecretAccessKey string
-	AWSRegion          string
-	FromEmailAddress   string
-	SESFromDisplayName string
+	SESAccessKeyID      string
+	SESSecretAccessKey  string
+	SESRegion           string
+	SESFromEmailAddress string
+	SESFromDisplayName  string
 
 	MaxSendRate int
 	QueueSize   int
@@ -211,13 +211,13 @@ func NewEmailService(cfg EmailConfig) (*EmailService, error) {
 
 func newConfiguredEmailSender(cfg EmailConfig) (emailSender, error) {
 	if sesAvailable(cfg) {
-		region := strings.TrimSpace(cfg.AWSRegion)
+		region := strings.TrimSpace(cfg.SESRegion)
 		if region == "" {
 			region = "us-east-1"
 		}
 		creds := credentials.NewStaticCredentialsProvider(
-			cfg.AWSAccessKeyID,
-			cfg.AWSSecretAccessKey,
+			cfg.SESAccessKeyID,
+			cfg.SESSecretAccessKey,
 			"",
 		)
 		awsCfg, err := awsconfig.LoadDefaultConfig(
@@ -229,9 +229,9 @@ func newConfiguredEmailSender(cfg EmailConfig) (emailSender, error) {
 			return nil, fmt.Errorf("failed to load AWS SDK configuration: %w", err)
 		}
 
-		from := cfg.FromEmailAddress
+		from := cfg.SESFromEmailAddress
 		if cfg.SESFromDisplayName != "" {
-			from = (&mail.Address{Name: cfg.SESFromDisplayName, Address: cfg.FromEmailAddress}).String()
+			from = (&mail.Address{Name: cfg.SESFromDisplayName, Address: cfg.SESFromEmailAddress}).String()
 		}
 		return &sesSender{client: sesv2.NewFromConfig(awsCfg), from: from}, nil
 	}
@@ -268,9 +268,9 @@ func newConfiguredEmailSender(cfg EmailConfig) (emailSender, error) {
 }
 
 func sesAvailable(cfg EmailConfig) bool {
-	return strings.TrimSpace(cfg.AWSAccessKeyID) != "" &&
-		strings.TrimSpace(cfg.AWSSecretAccessKey) != "" &&
-		strings.TrimSpace(cfg.FromEmailAddress) != ""
+	return strings.TrimSpace(cfg.SESAccessKeyID) != "" &&
+		strings.TrimSpace(cfg.SESSecretAccessKey) != "" &&
+		strings.TrimSpace(cfg.SESFromEmailAddress) != ""
 }
 
 func newEmailServiceWithSender(sender emailSender, cfg EmailConfig) *EmailService {

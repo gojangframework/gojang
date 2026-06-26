@@ -64,27 +64,27 @@ func main() {
 
 	// Setup email service when SES or SMTP is configured.
 	var emailService *utils.EmailService
-	sesConfigured := strings.TrimSpace(cfg.AWSAccessKeyID) != "" &&
-		strings.TrimSpace(cfg.AWSSecretAccessKey) != "" &&
-		strings.TrimSpace(cfg.FromEmailAddress) != ""
+	sesConfigured := strings.TrimSpace(cfg.AWSSESAccessKeyID) != "" &&
+		strings.TrimSpace(cfg.AWSSESSecretAccessKey) != "" &&
+		strings.TrimSpace(cfg.AWSSESFromEmail) != ""
 	smtpConfigured := strings.TrimSpace(cfg.SMTPHost) != ""
 	if sesConfigured || smtpConfigured {
 		emailService, err = utils.NewEmailService(utils.EmailConfig{
-			SMTPHost:           cfg.SMTPHost,
-			SMTPPort:           cfg.SMTPPort,
-			SMTPUser:           cfg.SMTPUser,
-			SMTPPass:           cfg.SMTPPass,
-			FromAddress:        cfg.SMTPFrom,
-			FromDisplayName:    cfg.SMTPFromName,
-			AWSAccessKeyID:     cfg.AWSAccessKeyID,
-			AWSSecretAccessKey: cfg.AWSSecretAccessKey,
-			AWSRegion:          cfg.AWSRegion,
-			FromEmailAddress:   cfg.FromEmailAddress,
-			SESFromDisplayName: cfg.FromDisplayName,
-			MaxSendRate:        cfg.EmailSendRate,
-			QueueSize:          cfg.EmailQueueSize,
-			WorkerCount:        cfg.EmailWorkerCount,
-			SendTimeout:        cfg.EmailSendTimeout,
+			SMTPHost:            cfg.SMTPHost,
+			SMTPPort:            cfg.SMTPPort,
+			SMTPUser:            cfg.SMTPUser,
+			SMTPPass:            cfg.SMTPPass,
+			FromAddress:         cfg.SMTPFrom,
+			FromDisplayName:     cfg.SMTPFromName,
+			SESAccessKeyID:      cfg.AWSSESAccessKeyID,
+			SESSecretAccessKey:  cfg.AWSSESSecretAccessKey,
+			SESRegion:           cfg.AWSSESRegion,
+			SESFromEmailAddress: cfg.AWSSESFromEmail,
+			SESFromDisplayName:  cfg.AWSSESFromDisplayName,
+			MaxSendRate:         cfg.EmailSendRate,
+			QueueSize:           cfg.EmailQueueSize,
+			WorkerCount:         cfg.EmailWorkerCount,
+			SendTimeout:         cfg.EmailSendTimeout,
 		})
 		if err != nil {
 			utils.Errorf("Failed to setup email service: %v", err)

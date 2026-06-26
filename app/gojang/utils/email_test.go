@@ -176,12 +176,12 @@ func TestEmailServiceShutdownRejectsNewEmail(t *testing.T) {
 
 func TestNewEmailServiceProviderSelection(t *testing.T) {
 	sender, err := newConfiguredEmailSender(EmailConfig{
-		AWSAccessKeyID:     "key",
-		AWSSecretAccessKey: "secret",
-		AWSRegion:          "us-east-1",
-		FromEmailAddress:   "ses@example.com",
-		SMTPHost:           "smtp.example.com",
-		FromAddress:        "smtp@example.com",
+		SESAccessKeyID:      "key",
+		SESSecretAccessKey:  "secret",
+		SESRegion:           "us-east-1",
+		SESFromEmailAddress: "ses@example.com",
+		SMTPHost:            "smtp.example.com",
+		FromAddress:         "smtp@example.com",
 	})
 	if err != nil {
 		t.Fatalf("newConfiguredEmailSender() error = %v", err)
@@ -205,7 +205,7 @@ func TestNewEmailServiceProviderSelection(t *testing.T) {
 
 func TestPartialSESConfigFallsBackToSMTP(t *testing.T) {
 	sender, err := newConfiguredEmailSender(EmailConfig{
-		AWSAccessKeyID: "partial-key",
+		SESAccessKeyID: "partial-key",
 		SMTPHost:       "smtp.example.com",
 		SMTPPort:       587,
 		FromAddress:    "smtp@example.com",

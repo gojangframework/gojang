@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gojang Auth Security"
+  short_description: "Apply auth, email verification, reset, and security"
+  default_prompt: "Use $gojang-auth-security to protect a route or review authentication, email verification, or password reset in this Gojang app."

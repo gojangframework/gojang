@@ -38,11 +38,11 @@ type Config struct {
 	SMTPFrom string `env:"SMTP_FROM" envDefault:"noreply@localhost"`
 
 	// Amazon SES
-	AWSAccessKeyID     string `env:"AWS_ACCESS_KEY_ID"`
-	AWSSecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY"`
-	AWSRegion          string `env:"AWS_REGION" envDefault:"us-east-1"`
-	FromEmailAddress   string `env:"FROM_EMAIL_ADDRESS" envDefault:"noreply@localhost"`
-	FromDisplayName    string `env:"FROM_DISPLAY_NAME" envDefault:"Gojang"`
+	AWSSESAccessKeyID     string `env:"AWS_SES_ACCESS_KEY_ID"`
+	AWSSESSecretAccessKey string `env:"AWS_SES_SECRET_ACCESS_KEY"`
+	AWSSESRegion          string `env:"AWS_SES_REGION" envDefault:"us-east-1"`
+	AWSSESFromEmail       string `env:"AWS_SES_FROM_EMAIL_ADDRESS" envDefault:"noreply@localhost"`
+	AWSSESFromDisplayName string `env:"AWS_SES_FROM_DISPLAY_NAME" envDefault:"Gojang"`
 
 	// Email queue settings
 	SMTPFromName     string        `env:"SMTP_FROM_NAME"`
