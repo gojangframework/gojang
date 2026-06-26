@@ -1,3 +1,7 @@
+v0.3.1 - 6/26/2026
+- Email verification for new registration
+- Forgot / reset password process implemented with email verifcation
+
 v0.3 - 6/22/2026
 - New file structure - app base folder - app dev files and gojang framework files separated
 - New Airtable like admin site - all data model automatically ported - no more manual data model registry for admin site
