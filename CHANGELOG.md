@@ -1,6 +1,7 @@
 v0.3.1 - 6/26/2026
 - Email verification for new registration
 - Forgot / reset password process implemented with email verifcation
+- AWS SES email implementation 
 
 v0.3 - 6/22/2026
 - New file structure - app base folder - app dev files and gojang framework files separated
