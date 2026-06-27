@@ -2,8 +2,8 @@
 
 This comprehensive guide shows you how to add a complete data model to your Gojang application, including database schema, CRUD operations, and admin panel integration.
 
-> **🎉 Updated October 2025:** The admin panel now uses reflection for automatic CRUD operations!
-> No more manual switch statements in `registry.go` - just register your model and it works automatically.
+> **🎉 Updated June 2026:** The admin panel now uses reflection for automatic CRUD operations!
+> No more manual switch statements in `registry.go`, and no registration is needed for plain generated Ent models.
 
 ## Overview
 
@@ -13,7 +13,7 @@ Adding a new data model involves these steps:
 3. Run migrations
 4. Create handlers and routes
 5. Create templates
-6. Register with admin panel (**now automatic!**)
+6. Confirm admin auto-discovery, adding overrides only when needed
 
 **Estimated time:** 10-15 minutes per model
 
@@ -777,43 +777,35 @@ mkdir -p app/products/templates
 
 ---
 
-## Step 7: Register with Admin Panel
+## Step 7: Confirm Admin Auto-Discovery
 
-The admin panel provides automatic CRUD interface for your models.
+The admin panel provides an automatic CRUD interface for generated Ent models.
+After `go generate ./app/gojang/models`, `Product` appears on `*models.Client`,
+and the admin registry discovers it automatically. No `RegisterModel` entry is
+required for a plain resource.
 
-### Add to `app/gojang/admin/models.go`
+### Optional: Add an Admin Override
+
+Use `app/gojang/admin/models.go` only when the discovered resource needs custom
+admin behavior, such as curated list fields, hidden fields, hooks, custom
+fields, or eager-loaded relationships:
 
 ```go
-func RegisterModels(registry *Registry) {
-	// Existing User model
-	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.User{},
-		// ... existing config ...
-	})
+registry.RegisterModel(ModelRegistration{
+	ModelType:      &models.Product{},
+	Icon:           "📦",
+	NamePlural:     "Products",
+	ListFields:     []string{"ID", "Name", "Price", "Stock", "SKU", "IsActive"},
+	ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
 
-	// Existing Post model
-	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.Post{},
-		// ... existing config ...
-	})
-
-	// ✅ Add Product model
-	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.Product{},
-		Icon:           "📦",
-		NamePlural:     "Products",
-		ListFields:     []string{"ID", "Name", "Price", "Stock", "SKU", "IsActive"},
-		ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
-
-		// Eager load creator relationship
-		QueryModifier: func(ctx context.Context, query interface{}) interface{} {
-			if q, ok := query.(*models.ProductQuery); ok {
-				return q.WithCreator()
-			}
-			return query
-		},
-	})
-}
+	// Eager load creator relationship.
+	QueryModifier: func(ctx context.Context, query interface{}) interface{} {
+		if q, ok := query.(*models.ProductQuery); ok {
+			return q.WithCreator()
+		}
+		return query
+	},
+})
 ```
 
 ---
@@ -936,7 +928,8 @@ When adding a new model, use this checklist:
 - [ ] Create routes in `app/products/products.route.go`
 - [ ] Register routes in `app/cmd/web/main.go`
 - [ ] Create templates in `app/products/templates/`
-- [ ] Register with admin panel in `app/gojang/admin/models.go`
+- [ ] Confirm admin auto-discovery at `/admin/t/product`
+- [ ] Add an override in `app/gojang/admin/models.go` only if needed
 - [ ] ~~Add case statements in `app/gojang/admin/registry.go`~~ ✅ **No longer needed!**
 - [ ] Test CRUD operations
 - [ ] Test admin panel integration
@@ -975,7 +968,7 @@ Check for:
 
 ### Admin Panel Not Showing Model
 
-- ✅ Check model registered in `models.go`
+- ✅ Run `go generate ./app/gojang/models` so the model appears on `*models.Client`
 - ✅ ~~Check case statements added to all methods in `registry.go`~~ No longer needed!
 - ✅ Verify model name matches Ent client field (e.g., `client.Product`)
 - ✅ Restart server
@@ -1002,7 +995,8 @@ Check for:
 | 5. Routes | `app/products/products.route.go` | Define URL patterns |
 | 6. Main | `app/cmd/web/main.go` | Register routes |
 | 7. Templates | `app/products/templates/` | Create HTML views |
-| 8. Admin | `app/gojang/admin/models.go` | Register model (auto CRUD!) |
-| ~~9. Registry~~ | ~~`app/gojang/admin/registry.go`~~ | ~~Add case statements~~ ✅ **Removed!** |
+| 8. Admin | `/admin/t/{resource}` | Confirm auto-discovered workspace |
+| 9. Admin override | `app/gojang/admin/models.go` | Optional `RegisterModel` customization |
+| ~~10. Registry~~ | ~~`app/gojang/admin/registry.go`~~ | ~~Add case statements~~ ✅ **Removed!** |
 
 ---

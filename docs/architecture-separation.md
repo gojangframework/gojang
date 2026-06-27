@@ -84,10 +84,12 @@ func (h *PostHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 ### 4. Generic Admin Panel
 
-The admin panel uses **reflection-based CRUD** that works for ALL models:
+The admin panel uses **reflection-based CRUD** that works for ALL Ent models
+exposed on `*models.Client`. A plain generated model needs no explicit admin
+registration. Use `RegisterModel` only to override the discovered resource:
 
 ```go
-// Register a model - that's it!
+// Optional override for display fields, hooks, or eager loading.
 registry.RegisterModel(admin.ModelRegistration{
     ModelType:      &models.Post{},
     Icon:           "✎",
@@ -186,19 +188,15 @@ func (h *ProductHandler) ShowProduct(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### Admin Panel (always)
-```go
-// app/gojang/admin/models.go - just register it!
-registry.RegisterModel(admin.ModelRegistration{
-    ModelType:      &models.Product{},
-    Icon:           "▦",
-    NamePlural:     "Products",
-    ListFields:     []string{"ID", "Name", "Price"},
-    ReadonlyFields: []string{"ID", "CreatedAt", "UpdatedAt"},
-})
-```
+### Admin Panel (automatic)
 
-That's it! The admin panel automatically provides full CRUD in the workspace at `/admin/t/product`.
+After `go generate ./app/gojang/models`, the generated `Product` client appears
+on `*models.Client`, and the admin registry discovers it automatically. The
+admin panel provides full CRUD in the workspace at `/admin/t/product`.
+
+Add an override in `app/gojang/admin/models.go` only when the default resource
+metadata is not enough, such as custom list fields, hidden fields, hooks, or
+relationship eager loading.
 
 ## Verification
 

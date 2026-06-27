@@ -532,26 +532,18 @@ mkdir -p app/products/templates
 
 ---
 
-## Step 7: Register with Admin Panel
+## Step 7: Confirm Admin Auto-Discovery
 
-Add to `app/gojang/admin/models.go`:
+After `go generate ./app/gojang/models`, the generated `Product` client is
+available on `*models.Client`, so the admin panel discovers it automatically.
+No `app/gojang/admin/models.go` change is required for a plain resource.
 
-```go
-func RegisterModels(registry *Registry) {
-	// ... existing models ...
+Add a `registry.RegisterModel(ModelRegistration{...})` override only when you
+need custom admin behavior, such as a different icon/name, curated list fields,
+hidden or readonly fields, hooks, custom fields, or eager-loaded relationships.
 
-	// Add Product model
-	registry.RegisterModel(ModelRegistration{
-		ModelType:      &models.Product{},
-		Icon:           "📦",
-		NamePlural:     "Products",
-		ListFields:     []string{"ID", "Name", "Price", "Stock"},
-		ReadonlyFields: []string{"ID", "CreatedAt"},
-	})
-}
-```
-
-That's it! The admin panel automatically handles CRUD operations.
+That's it! The admin panel automatically handles CRUD operations at
+`/admin/t/product`.
 
 ---
 
@@ -599,7 +591,7 @@ When adding a new model:
 - [ ] Create routes in `app/products/products.route.go`
 - [ ] Register routes in `app/cmd/web/main.go`
 - [ ] Create templates in `app/products/templates/`
-- [ ] Register in `app/gojang/admin/models.go`
+- [ ] Add an admin override in `app/gojang/admin/models.go` only if needed
 - [ ] Test CRUD operations
 
 ---

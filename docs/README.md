@@ -406,7 +406,9 @@ func FeatureRoutes(handler *FeatureHandler, sm *scs.SessionManager, client *mode
 
 ### Admin Panel
 
-The admin panel provides automatic CRUD interface for any Ent model:
+The admin panel discovers generated Ent models from `*models.Client` and
+provides an automatic CRUD workspace. Use `RegisterModel` only for optional
+admin overrides:
 
 ```go
 registry.RegisterModel(ModelRegistration{
@@ -418,7 +420,7 @@ registry.RegisterModel(ModelRegistration{
 })
 ```
 
-No custom admin code needed! ✨
+No custom admin code is needed for a plain generated model.
 
 ---
 
@@ -488,7 +490,7 @@ if r.Header.Get("HX-Request") == "true" {
 3. Create handler
 4. Create routes
 5. Create templates
-6. Register in admin panel (optional)
+6. Confirm admin auto-discovery; add an admin override only if needed
 7. Test!
 
 ### 2. Running the App

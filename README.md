@@ -168,7 +168,7 @@ Ready to start building? Check out our comprehensive guides:
 ```go
 // 1. Create schema: app/schema/product.go
 // 2. Generate: go generate ./app/gojang/models
-// 3. Register admin: registry.RegisterModel(...)
+// 3. Admin discovers Product from models.Client automatically
 ```
 
 See the [documentation](./docs/) for detailed step-by-step guides!
@@ -177,7 +177,8 @@ See the [documentation](./docs/) for detailed step-by-step guides!
 
 ### Auto-Generated Admin Panel
 
-Register any model and get a full admin interface automatically:
+Generate any Ent model and get a full admin interface automatically. Add a
+`RegisterModel` override only when you need custom admin metadata or behavior:
 
 ```go
 registry.RegisterModel(ModelRegistration{

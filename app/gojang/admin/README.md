@@ -113,6 +113,9 @@ Navigate to `http://localhost:8080/admin` (requires staff user).
 
 ### Override Model Display
 
+Plain Ent models are discovered automatically from `*models.Client`; this is
+only needed when the discovered admin resource needs display overrides:
+
 ```go
 registry.RegisterModel(admin.ModelRegistration{
     ModelType: &models.Post{},

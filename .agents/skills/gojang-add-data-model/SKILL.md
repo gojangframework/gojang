@@ -1,6 +1,6 @@
 ---
 name: gojang-add-data-model
-description: Add or modify data-backed features in a Gojang app. Use when creating Ent schemas, generated model code, CRUD handlers, forms, feature route packages, templates, migrations, or admin registration for a new resource.
+description: Add or modify data-backed features in a Gojang app. Use when creating Ent schemas, generated model code, CRUD handlers, forms, feature route packages, templates, migrations, or admin overrides for a resource.
 ---
 
 # Gojang Add Data Model
@@ -19,7 +19,7 @@ Use this skill to add an application resource with database-backed behavior.
    - `templates/index.html`
    - `.partial.html` templates for modal/forms/list fragments as needed
 6. Register the feature route in `app/cmd/web/main.go`.
-7. Register or customize admin behavior in `app/gojang/admin/models.go` when the resource should appear in the admin workspace.
+7. Rely on admin auto-discovery for plain generated Ent models; add or update `app/gojang/admin/models.go` only when the resource needs admin overrides.
 8. Run `go test ./...`; if generated code changes, also inspect generated files for expected field and edge names.
 
 ## Patterns
@@ -40,7 +40,8 @@ Use this skill to add an application resource with database-backed behavior.
 
 ## Admin Integration
 
-- Prefer `registry.RegisterModel(admin.ModelRegistration{...})` overrides in `app/gojang/admin/models.go`.
+- Plain generated Ent models are discovered from `*models.Client` after `go generate ./app/gojang/models`; no `RegisterModel` call is needed just to show the resource.
+- Prefer `registry.RegisterModel(admin.ModelRegistration{...})` overrides in `app/gojang/admin/models.go` only for custom admin behavior.
 - Use `BeforeCreate`, `BeforeUpdate`, or `BeforeSave` hooks for admin-only data transforms.
 - Use `QueryModifier` for eager loading relationships that list fields display.
 
@@ -49,4 +50,4 @@ Use this skill to add an application resource with database-backed behavior.
 - Quick start: `docs/quick-start-data-model.md`
 - Full guide: `docs/creating-data-models.md`
 - Existing feature: `app/posts/`
-- Admin model registration: `app/gojang/admin/models.go`
+- Admin model overrides: `app/gojang/admin/models.go`
