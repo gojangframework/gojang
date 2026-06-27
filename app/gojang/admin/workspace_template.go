@@ -12,20 +12,23 @@ import (
 
 func workspaceTemplateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"workspaceFields":        workspaceFields,
-		"drawerFields":           drawerFields,
-		"cellValue":              cellValue,
-		"inputValue":             inputValue,
-		"boolValue":              boolValue,
-		"boolCreateValue":        boolCreateValue,
-		"canInlineEdit":          canInlineEdit,
-		"canEditRecordField":     canEditRecordField,
-		"fieldReadonlyForRecord": fieldReadonlyForRecord,
-		"inputType":              inputType,
-		"gridQuery":              gridQuery,
-		"gridQueryWithoutFilter": gridQueryWithoutFilter,
-		"fieldSelected":          fieldSelected,
-		"dict":                   dict,
+		"workspaceFields":         workspaceFields,
+		"drawerFields":            drawerFields,
+		"cellValue":               cellValue,
+		"inputValue":              inputValue,
+		"boolValue":               boolValue,
+		"boolCreateValue":         boolCreateValue,
+		"canInlineEdit":           canInlineEdit,
+		"canEditRecordField":      canEditRecordField,
+		"fieldReadonlyForRecord":  fieldReadonlyForRecord,
+		"inputType":               inputType,
+		"gridQuery":               gridQuery,
+		"gridQueryWithoutFilter":  gridQueryWithoutFilter,
+		"gridQueryWithoutRelated": gridQueryWithoutRelated,
+		"fieldSelected":           fieldSelected,
+		"relationURL":             relationURL,
+		"relationSummary":         relationSummary,
+		"dict":                    dict,
 	}
 }
 
@@ -82,6 +85,14 @@ func gridQueryWithoutFilter(grid *resourcePageData, page int) template.URL {
 	return template.URL(values.Encode())
 }
 
+func gridQueryWithoutRelated(grid *resourcePageData, page int) template.URL {
+	values := gridQueryValues(grid, page)
+	values.Del("related_from")
+	values.Del("related_field")
+	values.Del("related_id")
+	return template.URL(values.Encode())
+}
+
 func gridQueryValues(grid *resourcePageData, page int) url.Values {
 	values := url.Values{}
 	values.Set("view", workspaceViewGrid)
@@ -106,6 +117,11 @@ func gridQueryValues(grid *resourcePageData, page int) url.Values {
 		values.Set("sort_field", grid.Sort.Field.Name)
 		values.Set("sort_dir", grid.Sort.Dir)
 	}
+	if grid.Related.Valid {
+		values.Set("related_from", grid.Related.SourceResource)
+		values.Set("related_field", grid.Related.SourceField.Name)
+		values.Set("related_id", grid.Related.SourceID.String())
+	}
 	return values
 }
 
@@ -123,11 +139,70 @@ func drawerFields(config *ModelConfig) []FieldConfig {
 }
 
 func cellValue(record interface{}, field FieldConfig) string {
+	if field.Relation {
+		return relationSummary(record, field)
+	}
 	value := ExtractFieldValue(record, field.Name)
 	if value == nil {
 		return ""
 	}
 	return fmt.Sprint(value)
+}
+
+func relationURL(config *ModelConfig, record interface{}, field FieldConfig) template.URL {
+	if config == nil || record == nil || !field.Relation || field.RelationTarget == "" {
+		return ""
+	}
+	id := getIDValue(record)
+	if id == "" {
+		return ""
+	}
+	values := url.Values{}
+	values.Set("view", workspaceViewGrid)
+	values.Set("related_from", config.Name)
+	values.Set("related_field", field.Name)
+	values.Set("related_id", id)
+	return template.URL("/admin/t/" + strings.ToLower(field.RelationTarget) + "?" + values.Encode())
+}
+
+func relationSummary(record interface{}, field FieldConfig) string {
+	if !field.Relation {
+		return ""
+	}
+	value := rawFieldValue(record, field.Name)
+	if value == nil {
+		return "Open related " + field.RelationTarget
+	}
+	v := reflect.ValueOf(value)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "No related " + field.RelationTarget
+		}
+		return cellLabel(value)
+	}
+	if v.Kind() == reflect.Slice {
+		count := v.Len()
+		if count == 0 {
+			return "No related " + pluralize(field.RelationTarget)
+		}
+		if count == 1 {
+			return "1 related " + field.RelationTarget
+		}
+		return fmt.Sprintf("%d related %s", count, pluralize(field.RelationTarget))
+	}
+	return fmt.Sprint(value)
+}
+
+func cellLabel(record interface{}) string {
+	if record == nil {
+		return ""
+	}
+	for _, name := range []string{"Email", "Name", "Title", "Subject", "Key", "ID"} {
+		if value := rawFieldValue(record, name); value != nil {
+			return fmt.Sprint(formatFieldValue(value))
+		}
+	}
+	return fmt.Sprint(record)
 }
 
 func inputValue(record interface{}, field FieldConfig) string {

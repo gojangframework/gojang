@@ -36,7 +36,13 @@
             </label>
 
             {{if fieldReadonlyForRecord $config $record .}}
+            {{if relationURL $config $record .}}
+            <a class="drawer-relation-link" href="{{relationURL $config $record .}}">
+                {{relationSummary $record .}}
+            </a>
+            {{else}}
             <div class="drawer-readonly-value">{{if $isEdit}}{{cellValue $record .}}{{end}}</div>
+            {{end}}
             {{else if eq .Type "bool"}}
             <label class="drawer-checkbox">
                 <input type="hidden" name="{{.Name}}__present" value="true">

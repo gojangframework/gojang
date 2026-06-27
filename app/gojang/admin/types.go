@@ -54,6 +54,11 @@ type FieldConfig struct {
 	Filterable bool
 	System     bool // Internal/protected field
 	Virtual    bool // Not backed by a direct Ent struct field
+
+	// Relation metadata for Ent edge fields.
+	Relation       bool
+	RelationTarget string
+	RelationMany   bool
 }
 
 // FieldType represents the type of field

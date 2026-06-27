@@ -302,20 +302,41 @@ func extractRelationFields(entityType reflect.Type) []FieldConfig {
 		if !edge.IsExported() || edge.Name == "loadedTypes" {
 			continue
 		}
+		target, many := relationTargetFromEdgeType(edge.Type)
+		if target == "" {
+			continue
+		}
 		fields = append(fields, FieldConfig{
-			Name:       edge.Name,
-			Label:      formatLabel(edge.Name),
-			Type:       FieldTypeSelect,
-			Readonly:   true,
-			Editable:   false,
-			Visible:    true,
-			Width:      220,
-			Primary:    false,
-			Sortable:   false,
-			Filterable: false,
+			Name:           edge.Name,
+			Label:          formatLabel(edge.Name),
+			Type:           FieldTypeSelect,
+			Readonly:       true,
+			Editable:       false,
+			Visible:        true,
+			Width:          220,
+			Primary:        false,
+			Sortable:       false,
+			Filterable:     false,
+			Relation:       true,
+			RelationTarget: target,
+			RelationMany:   many,
 		})
 	}
 	return fields
+}
+
+func relationTargetFromEdgeType(edgeType reflect.Type) (string, bool) {
+	many := false
+	for edgeType.Kind() == reflect.Slice || edgeType.Kind() == reflect.Ptr {
+		if edgeType.Kind() == reflect.Slice {
+			many = true
+		}
+		edgeType = edgeType.Elem()
+	}
+	if edgeType.Kind() != reflect.Struct {
+		return "", false
+	}
+	return edgeType.Name(), many
 }
 
 func appendMissingFields(fields []FieldConfig, additions ...FieldConfig) []FieldConfig {

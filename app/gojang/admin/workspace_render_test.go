@@ -391,6 +391,72 @@ func TestGridFieldSelectionFilterAndSortAffectRows(t *testing.T) {
 	}
 }
 
+func TestGridCanOpenRelatedRecords(t *testing.T) {
+	sourceID := uuid.New()
+	registry := &Registry{models: map[string]*ModelConfig{}}
+	registry.register(&ModelConfig{
+		Name:       "Source",
+		NamePlural: "Sources",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Items", Label: "Items", Type: FieldTypeSelect, Readonly: true, Visible: true, Relation: true, RelationTarget: "Item", RelationMany: true},
+		},
+		QueryByID: func(ctx context.Context, got uuid.UUID) (interface{}, error) {
+			if got != sourceID {
+				t.Fatalf("expected source ID %s, got %s", sourceID, got)
+			}
+			return fakeRelatedSource{
+				ID: sourceID,
+				Items: []fakeRelatedItem{
+					{ID: uuid.New(), Name: "alpha"},
+					{ID: uuid.New(), Name: "beta"},
+				},
+			}, nil
+		},
+	})
+	registry.register(&ModelConfig{
+		Name:       "Item",
+		NamePlural: "Items",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Name", Label: "Name", Type: FieldTypeString, Editable: true, Visible: true, Width: 220, Sortable: true, Filterable: true},
+		},
+		ListFields: []string{"ID", "Name"},
+	})
+
+	renderer, err := NewAdminRenderer(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(registry, renderer, nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&related_from=Source&related_field=Items&related_id="+sourceID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("resource", "item")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	handler.Grid(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Related items from Source Items",
+		"alpha",
+		"beta",
+		`name="related_from" value="Source"`,
+		`name="related_field" value="Items"`,
+		`name="related_id" value="` + sourceID.String() + `"`,
+		`href="/admin/t/item?`,
+		`related_id=` + sourceID.String(),
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected related grid to contain %q, got %s", want, body)
+		}
+	}
+}
+
 func TestRenderCellErrorReturnsSwappablePartial(t *testing.T) {
 	id := uuid.New()
 	config := &ModelConfig{
@@ -541,6 +607,28 @@ func (q *fakePredicateQuery) Where(predicates ...fakePredicate) *fakePredicateQu
 
 func reflectValueOfWhere(query *fakePredicateQuery) reflect.Value {
 	return reflect.ValueOf(query).MethodByName("Where")
+}
+
+type fakeRelatedSource struct {
+	ID    uuid.UUID
+	Items []fakeRelatedItem
+}
+
+func (s fakeRelatedSource) QueryItems() *fakeRelatedItemQuery {
+	return &fakeRelatedItemQuery{records: s.Items}
+}
+
+type fakeRelatedItem struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type fakeRelatedItemQuery struct {
+	records []fakeRelatedItem
+}
+
+func (q *fakeRelatedItemQuery) All(ctx context.Context) ([]fakeRelatedItem, error) {
+	return q.records, nil
 }
 
 type fakeTimeUpdateBuilder struct {

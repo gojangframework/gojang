@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,6 +40,7 @@ type resourcePageData struct {
 	SelectedFields map[string]bool
 	Filter         GridFilter
 	Sort           GridSort
+	Related        RelatedFilter
 }
 
 type GridFilter struct {
@@ -52,6 +54,13 @@ type GridSort struct {
 	Field FieldConfig
 	Dir   string
 	Valid bool
+}
+
+type RelatedFilter struct {
+	SourceResource string
+	SourceField    FieldConfig
+	SourceID       uuid.UUID
+	Valid          bool
 }
 
 const (
@@ -390,8 +399,9 @@ func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resou
 	selectedFields := parseSelectedGridFields(r.URL.Query()["fields"], allFields, defaultFields)
 	filter := parseGridFilter(r, allFields)
 	sortState := parseGridSort(r, allFields)
+	related := h.parseRelatedFilter(r, config)
 
-	records, totalCount, err := h.queryWorkspaceRecords(r, config, filter, sortState, perPage, offset)
+	records, totalCount, err := h.queryWorkspaceRecords(r, config, filter, sortState, related, perPage, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -413,10 +423,26 @@ func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resou
 		SelectedFields: selectedFields,
 		Filter:         filter,
 		Sort:           sortState,
+		Related:        related,
 	}, nil
 }
 
-func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, filter GridFilter, sortState GridSort, limit, offset int) ([]interface{}, int, error) {
+func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, filter GridFilter, sortState GridSort, related RelatedFilter, limit, offset int) ([]interface{}, int, error) {
+	if related.Valid {
+		records, err := h.queryRelatedRecords(r, related)
+		if err != nil {
+			return nil, 0, err
+		}
+		if filter.Valid {
+			records = filterRecords(records, filter)
+		}
+		if sortState.Valid {
+			sortRecords(records, sortState)
+		}
+		totalCount := len(records)
+		return paginateRecords(records, totalCount, limit, offset), totalCount, nil
+	}
+
 	if !filter.Valid && !sortState.Valid {
 		totalCount, err := config.CountAll(r.Context())
 		if err != nil {
@@ -439,14 +465,84 @@ func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, fi
 		sortRecords(records, sortState)
 	}
 	totalCount := len(records)
+	return paginateRecords(records, totalCount, limit, offset), totalCount, nil
+}
+
+func paginateRecords(records []interface{}, totalCount, limit, offset int) []interface{} {
 	end := offset + limit
 	if offset > totalCount {
-		return []interface{}{}, totalCount, nil
+		return []interface{}{}
 	}
 	if end > totalCount {
 		end = totalCount
 	}
-	return records[offset:end], totalCount, nil
+	return records[offset:end]
+}
+
+func (h *Handler) parseRelatedFilter(r *http.Request, targetConfig *ModelConfig) RelatedFilter {
+	sourceResource := strings.TrimSpace(r.URL.Query().Get("related_from"))
+	sourceFieldName := strings.TrimSpace(r.URL.Query().Get("related_field"))
+	sourceIDRaw := strings.TrimSpace(r.URL.Query().Get("related_id"))
+	if sourceResource == "" || sourceFieldName == "" || sourceIDRaw == "" || targetConfig == nil {
+		return RelatedFilter{}
+	}
+	sourceID, err := uuid.Parse(sourceIDRaw)
+	if err != nil {
+		return RelatedFilter{}
+	}
+	sourceConfig, err := h.Registry.Get(sourceResource)
+	if err != nil || sourceConfig.Internal {
+		return RelatedFilter{}
+	}
+	sourceField, ok := findField(sourceConfig, sourceFieldName)
+	if !ok || !sourceField.Relation || sourceField.RelationTarget != targetConfig.Name {
+		return RelatedFilter{}
+	}
+	return RelatedFilter{
+		SourceResource: sourceConfig.Name,
+		SourceField:    sourceField,
+		SourceID:       sourceID,
+		Valid:          true,
+	}
+}
+
+func (h *Handler) queryRelatedRecords(r *http.Request, related RelatedFilter) ([]interface{}, error) {
+	sourceConfig, err := h.Registry.Get(related.SourceResource)
+	if err != nil {
+		return nil, err
+	}
+	sourceRecord, err := sourceConfig.QueryByID(r.Context(), related.SourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	recordValue := reflect.ValueOf(sourceRecord)
+	queryMethod := recordValue.MethodByName("Query" + related.SourceField.Name)
+	if !queryMethod.IsValid() {
+		return nil, fmt.Errorf("related query %s.%s is not available", related.SourceResource, related.SourceField.Name)
+	}
+	queryResults := queryMethod.Call(nil)
+	if len(queryResults) != 1 {
+		return nil, fmt.Errorf("related query %s.%s returned unexpected values", related.SourceResource, related.SourceField.Name)
+	}
+	allMethod := queryResults[0].MethodByName("All")
+	if !allMethod.IsValid() {
+		return nil, fmt.Errorf("related query %s.%s cannot list records", related.SourceResource, related.SourceField.Name)
+	}
+	allResults := allMethod.Call([]reflect.Value{reflect.ValueOf(r.Context())})
+	if len(allResults) != 2 {
+		return nil, fmt.Errorf("related query %s.%s returned unexpected list values", related.SourceResource, related.SourceField.Name)
+	}
+	if !allResults[1].IsNil() {
+		return nil, allResults[1].Interface().(error)
+	}
+
+	recordsVal := allResults[0]
+	records := make([]interface{}, recordsVal.Len())
+	for i := 0; i < recordsVal.Len(); i++ {
+		records[i] = recordsVal.Index(i).Interface()
+	}
+	return records, nil
 }
 
 func (h *Handler) publicResourceConfig(w http.ResponseWriter, r *http.Request) (*ModelConfig, bool) {
@@ -757,6 +853,15 @@ func currentGridQuery(r *http.Request) template.URL {
 	}
 	if dir := strings.TrimSpace(source.Get("sort_dir")); dir != "" {
 		values.Set("sort_dir", dir)
+	}
+	if relatedFrom := strings.TrimSpace(source.Get("related_from")); relatedFrom != "" {
+		values.Set("related_from", relatedFrom)
+	}
+	if relatedField := strings.TrimSpace(source.Get("related_field")); relatedField != "" {
+		values.Set("related_field", relatedField)
+	}
+	if relatedID := strings.TrimSpace(source.Get("related_id")); relatedID != "" {
+		values.Set("related_id", relatedID)
 	}
 	return template.URL(values.Encode())
 }
