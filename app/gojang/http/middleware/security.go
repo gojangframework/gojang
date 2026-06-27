@@ -37,6 +37,7 @@ type SecurityOptions struct {
 	ImgSrc                       []string
 	FontSrc                      []string
 	ConnectSrc                   []string
+	FrameSrc                     []string
 	FrameAncestors               []string
 	SameOriginFrameAncestorPaths []string
 }
@@ -55,8 +56,10 @@ func SecurityOptionsFromConfig(cfg *config.Config) SecurityOptions {
 	opts.ImgSrc = overrideOrDefault(cfg.CSPImgSrc, opts.ImgSrc)
 	opts.FontSrc = overrideOrDefault(cfg.CSPFontSrc, opts.FontSrc)
 	opts.ConnectSrc = overrideOrDefault(cfg.CSPConnectSrc, opts.ConnectSrc)
+	opts.FrameSrc = overrideOrDefault(cfg.CSPFrameSrc, opts.FrameSrc)
 	opts.FrameAncestors = overrideOrDefault(cfg.CSPFrameAncestors, opts.FrameAncestors)
 	opts.SameOriginFrameAncestorPaths = append([]string(nil), cfg.CSPSameOriginFrameAncestors...)
+	opts = allowConfiguredGoogleIntegrations(cfg, opts)
 	return opts
 }
 
@@ -103,6 +106,7 @@ func defaultSecurityOptions() SecurityOptions {
 		ImgSrc:         []string{"'self'", "data:", "https:"},
 		FontSrc:        []string{"'self'"},
 		ConnectSrc:     []string{"'self'"},
+		FrameSrc:       []string{"'self'"},
 		FrameAncestors: []string{"'none'"},
 	}
 }
@@ -115,8 +119,62 @@ func normalizeSecurityOptions(opts SecurityOptions) SecurityOptions {
 	opts.ImgSrc = overrideOrDefault(opts.ImgSrc, defaults.ImgSrc)
 	opts.FontSrc = overrideOrDefault(opts.FontSrc, defaults.FontSrc)
 	opts.ConnectSrc = overrideOrDefault(opts.ConnectSrc, defaults.ConnectSrc)
+	opts.FrameSrc = overrideOrDefault(opts.FrameSrc, defaults.FrameSrc)
 	opts.FrameAncestors = overrideOrDefault(opts.FrameAncestors, defaults.FrameAncestors)
 	return opts
+}
+
+func allowConfiguredGoogleIntegrations(cfg *config.Config, opts SecurityOptions) SecurityOptions {
+	if cfg == nil {
+		return opts
+	}
+
+	if !cfg.Debug && strings.TrimSpace(cfg.GoogleAnalyticsMeasurementID) != "" {
+		opts.ScriptSrc = appendUniqueDirectiveValues(opts.ScriptSrc,
+			"https://www.googletagmanager.com",
+		)
+		opts.ConnectSrc = appendUniqueDirectiveValues(opts.ConnectSrc,
+			"https://www.google-analytics.com",
+			"https://analytics.google.com",
+			"https://www.googletagmanager.com",
+		)
+	}
+
+	if strings.TrimSpace(cfg.RecaptchaSiteKey) != "" && strings.TrimSpace(cfg.RecaptchaSecretKey) != "" {
+		opts.ScriptSrc = appendUniqueDirectiveValues(opts.ScriptSrc,
+			"https://www.google.com",
+			"https://www.gstatic.com",
+		)
+		opts.ConnectSrc = appendUniqueDirectiveValues(opts.ConnectSrc,
+			"https://www.google.com",
+			"https://www.gstatic.com",
+		)
+		opts.FrameSrc = appendUniqueDirectiveValues(opts.FrameSrc,
+			"https://www.google.com",
+		)
+	}
+
+	return opts
+}
+
+func appendUniqueDirectiveValues(values []string, additions ...string) []string {
+	result := append([]string(nil), values...)
+	seen := make(map[string]struct{}, len(result)+len(additions))
+	for _, value := range result {
+		seen[value] = struct{}{}
+	}
+	for _, addition := range additions {
+		addition = strings.TrimSpace(addition)
+		if addition == "" {
+			continue
+		}
+		if _, ok := seen[addition]; ok {
+			continue
+		}
+		result = append(result, addition)
+		seen[addition] = struct{}{}
+	}
+	return result
 }
 
 func overrideOrDefault(values, defaults []string) []string {
@@ -146,6 +204,7 @@ func buildCSP(opts SecurityOptions, frameAncestors []string) string {
 		"img-src " + strings.Join(opts.ImgSrc, " "),
 		"font-src " + strings.Join(opts.FontSrc, " "),
 		"connect-src " + strings.Join(opts.ConnectSrc, " "),
+		"frame-src " + strings.Join(opts.FrameSrc, " "),
 		"frame-ancestors " + strings.Join(cleanDirectiveValues(frameAncestors), " "),
 	}
 

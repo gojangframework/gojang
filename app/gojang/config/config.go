@@ -24,6 +24,7 @@ type Config struct {
 	CSPImgSrc                   []string `env:"CSP_IMG_SRC" envSeparator:","`
 	CSPFontSrc                  []string `env:"CSP_FONT_SRC" envSeparator:","`
 	CSPConnectSrc               []string `env:"CSP_CONNECT_SRC" envSeparator:","`
+	CSPFrameSrc                 []string `env:"CSP_FRAME_SRC" envSeparator:","`
 	CSPFrameAncestors           []string `env:"CSP_FRAME_ANCESTORS" envSeparator:","`
 	CSPSameOriginFrameAncestors []string `env:"CSP_SAME_ORIGIN_FRAME_PATHS" envSeparator:","`
 
@@ -50,6 +51,13 @@ type Config struct {
 	EmailQueueSize   int           `env:"EMAIL_QUEUE_SIZE" envDefault:"1000"`
 	EmailWorkerCount int           `env:"EMAIL_WORKER_COUNT" envDefault:"14"`
 	EmailSendTimeout time.Duration `env:"EMAIL_SEND_TIMEOUT" envDefault:"15s"`
+
+	// Google integrations
+	GoogleAnalyticsMeasurementID string   `env:"GOOGLE_ANALYTICS_MEASUREMENT_ID"`
+	RecaptchaSiteKey             string   `env:"RECAPTCHA_SITE_KEY"`
+	RecaptchaSecretKey           string   `env:"RECAPTCHA_SECRET_KEY"`
+	RecaptchaMinScore            float64  `env:"RECAPTCHA_MIN_SCORE" envDefault:"0.5"`
+	RecaptchaAllowedHostnames    []string `env:"RECAPTCHA_ALLOWED_HOSTNAMES" envSeparator:","`
 }
 
 func Load() (*Config, error) {

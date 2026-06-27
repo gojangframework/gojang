@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gojangframework/gojang/app/gojang/config"
 	"github.com/gojangframework/gojang/app/gojang/utils"
 	"github.com/gojangframework/gojang/app/views/i18n"
 
@@ -23,11 +24,12 @@ import (
 )
 
 type Renderer struct {
-	templates  map[string]*template.Template
-	mu         sync.RWMutex // Protects templates map
-	debug      bool
-	translator *i18n.Translator
-	sessions   SessionManager
+	templates                    map[string]*template.Template
+	mu                           sync.RWMutex // Protects templates map
+	debug                        bool
+	translator                   *i18n.Translator
+	googleAnalyticsMeasurementID string
+	sessions                     SessionManager
 }
 
 // SessionManager is the small session API needed for flash messages.
@@ -40,6 +42,15 @@ type RendererOption func(*Renderer)
 func WithSessionManager(sessions SessionManager) RendererOption {
 	return func(r *Renderer) {
 		r.sessions = sessions
+	}
+}
+
+func WithGoogleIntegrations(cfg *config.Config) RendererOption {
+	return func(r *Renderer) {
+		if cfg == nil || cfg.Debug {
+			return
+		}
+		r.googleAnalyticsMeasurementID = strings.TrimSpace(cfg.GoogleAnalyticsMeasurementID)
 	}
 }
 
@@ -69,16 +80,17 @@ type PaginationData struct {
 
 // TemplateData holds data for template rendering
 type TemplateData struct {
-	Title       string
-	Data        map[string]interface{}
-	User        *models.User
-	CSRFToken   string
-	IsHX        bool
-	Errors      map[string]string
-	CurrentPath string
-	Flash       string
-	FlashType   string
-	Lang        string
+	Title                        string
+	Data                         map[string]interface{}
+	User                         *models.User
+	CSRFToken                    string
+	IsHX                         bool
+	Errors                       map[string]string
+	CurrentPath                  string
+	Flash                        string
+	FlashType                    string
+	Lang                         string
+	GoogleAnalyticsMeasurementID string
 }
 
 // NewRenderer creates a new template renderer for public site
@@ -522,6 +534,7 @@ func (r *Renderer) prepareTemplateData(req *http.Request, data *TemplateData, fo
 	data.User = middleware.GetUser(req.Context())
 	data.IsHX = forceHX || req.Header.Get("HX-Request") == "true"
 	data.CurrentPath = req.URL.Path
+	data.GoogleAnalyticsMeasurementID = r.googleAnalyticsMeasurementID
 	if data.Lang == "" {
 		data.Lang = r.translator.DetectLanguage(req)
 	}
