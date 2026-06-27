@@ -157,6 +157,7 @@ func (r *Registry) RegisterModel(reg ModelRegistration) error {
 		ListFields:     listFields,
 		HiddenFields:   hiddenFields,
 		ReadonlyFields: readonlyFields,
+		QueryModifier:  reg.QueryModifier,
 
 		QueryAll: func(ctx context.Context) ([]interface{}, error) {
 			return r.queryAll(ctx, modelName, reg.QueryModifier)

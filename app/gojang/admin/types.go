@@ -16,6 +16,7 @@ type ModelConfig struct {
 	HiddenFields   []string      // Fields to hide
 	ReadonlyFields []string      // Fields that can't be edited
 	Internal       bool          // Hide from generic admin workspace routes
+	QueryModifier  AfterLoadHook // Optional hook to eager-load or adjust Ent queries
 
 	// CRUD operations
 	QueryAll          func(ctx context.Context) ([]interface{}, error)

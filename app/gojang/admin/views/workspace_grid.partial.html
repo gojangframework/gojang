@@ -149,10 +149,12 @@
                 </form>
             </details>
 
+            {{if not $grid.Related.Valid}}
             <button class="primary-toolbar-button"
                 hx-get="/admin/t/{{$config.Name | lower}}/records/new?{{gridQuery $grid $grid.Page}}"
                 hx-target="#record-drawer"
                 hx-swap="innerHTML">+ Add record</button>
+            {{end}}
         </div>
 
         <form class="sheet-page-size"
@@ -224,6 +226,7 @@
                     </td>
                 </tr>
             {{end}}
+            {{if not $grid.Related.Valid}}
             <tr class="new-record-row">
                 <td class="row-number-col">+</td>
                 <td colspan="{{add (len $fields) 1}}">
@@ -233,6 +236,7 @@
                         hx-swap="innerHTML">Add a new {{$config.Name | lower}}</button>
                 </td>
             </tr>
+            {{end}}
         </tbody>
     </table>
 </div>

@@ -422,6 +422,12 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 			{Name: "Name", Label: "Name", Type: FieldTypeString, Editable: true, Visible: true, Width: 220, Sortable: true, Filterable: true},
 		},
 		ListFields: []string{"ID", "Name"},
+		QueryModifier: func(ctx context.Context, query interface{}) interface{} {
+			if q, ok := query.(*fakeRelatedItemQuery); ok {
+				q.namePrefix = "modified-"
+			}
+			return query
+		},
 	})
 
 	renderer, err := NewAdminRenderer(false)
@@ -443,8 +449,8 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		"Related items from Source Items",
-		"alpha",
-		"beta",
+		"modified-alpha",
+		"modified-beta",
 		`name="related_from" value="Source"`,
 		`name="related_field" value="Items"`,
 		`name="related_id" value="` + sourceID.String() + `"`,
@@ -454,6 +460,29 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected related grid to contain %q, got %s", want, body)
 		}
+	}
+	for _, unwanted := range []string{`>+ Add record</button>`, `new-record-row`, `Add a new item`} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("expected related grid to hide create affordance %q, got %s", unwanted, body)
+		}
+	}
+}
+
+func TestRelationSummaryDistinguishesUnloadedAndEmptySlices(t *testing.T) {
+	field := FieldConfig{Name: "Items", Relation: true, RelationTarget: "Item"}
+
+	unloaded := struct {
+		Items []fakeRelatedItem
+	}{}
+	if got := relationSummary(unloaded, field); got != "Open related Items" {
+		t.Fatalf("expected unloaded nil relation slice to invite drilldown, got %q", got)
+	}
+
+	loadedEmpty := struct {
+		Items []fakeRelatedItem
+	}{Items: []fakeRelatedItem{}}
+	if got := relationSummary(loadedEmpty, field); got != "No related Items" {
+		t.Fatalf("expected loaded empty relation slice to show empty summary, got %q", got)
 	}
 }
 
@@ -624,11 +653,20 @@ type fakeRelatedItem struct {
 }
 
 type fakeRelatedItemQuery struct {
-	records []fakeRelatedItem
+	records    []fakeRelatedItem
+	namePrefix string
 }
 
 func (q *fakeRelatedItemQuery) All(ctx context.Context) ([]fakeRelatedItem, error) {
-	return q.records, nil
+	if q.namePrefix == "" {
+		return q.records, nil
+	}
+	records := make([]fakeRelatedItem, len(q.records))
+	copy(records, q.records)
+	for i := range records {
+		records[i].Name = q.namePrefix + records[i].Name
+	}
+	return records, nil
 }
 
 type fakeTimeUpdateBuilder struct {

@@ -511,6 +511,10 @@ func (h *Handler) queryRelatedRecords(r *http.Request, related RelatedFilter) ([
 	if err != nil {
 		return nil, err
 	}
+	targetConfig, err := h.Registry.Get(related.SourceField.RelationTarget)
+	if err != nil {
+		return nil, err
+	}
 	sourceRecord, err := sourceConfig.QueryByID(r.Context(), related.SourceID)
 	if err != nil {
 		return nil, err
@@ -525,7 +529,12 @@ func (h *Handler) queryRelatedRecords(r *http.Request, related RelatedFilter) ([
 	if len(queryResults) != 1 {
 		return nil, fmt.Errorf("related query %s.%s returned unexpected values", related.SourceResource, related.SourceField.Name)
 	}
-	allMethod := queryResults[0].MethodByName("All")
+	query := queryResults[0].Interface()
+	if targetConfig.QueryModifier != nil {
+		query = targetConfig.QueryModifier(r.Context(), query)
+	}
+	queryVal := reflect.ValueOf(query)
+	allMethod := queryVal.MethodByName("All")
 	if !allMethod.IsValid() {
 		return nil, fmt.Errorf("related query %s.%s cannot list records", related.SourceResource, related.SourceField.Name)
 	}

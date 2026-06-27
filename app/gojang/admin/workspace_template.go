@@ -176,11 +176,14 @@ func relationSummary(record interface{}, field FieldConfig) string {
 	v := reflect.ValueOf(value)
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
-			return "No related " + field.RelationTarget
+			return "Open related " + field.RelationTarget
 		}
 		return cellLabel(value)
 	}
 	if v.Kind() == reflect.Slice {
+		if v.IsNil() {
+			return "Open related " + pluralize(field.RelationTarget)
+		}
 		count := v.Len()
 		if count == 0 {
 			return "No related " + pluralize(field.RelationTarget)
