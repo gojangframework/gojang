@@ -33,6 +33,16 @@ type stubAuthEmailSender struct {
 	returnResetErr error
 }
 
+type stubRecaptchaVerifier struct {
+	siteKey      string
+	calls        int
+	lastToken    string
+	lastAction   string
+	lastRemoteIP string
+	requireToken bool
+	returnErr    error
+}
+
 func (s *stubAuthEmailSender) SendHTMLEmail(to []string, subject, htmlBody string) error {
 	s.htmlCalls++
 	s.lastHTMLTo = append([]string(nil), to...)
@@ -46,6 +56,31 @@ func (s *stubAuthEmailSender) SendPasswordResetEmail(to, resetURL string) error 
 	s.lastResetTo = to
 	s.lastResetURL = resetURL
 	return s.returnResetErr
+}
+
+func (s *stubRecaptchaVerifier) SiteKey() string {
+	return s.siteKey
+}
+
+func (s *stubRecaptchaVerifier) ScriptURL() string {
+	if s.siteKey == "" {
+		return ""
+	}
+	return "https://www.google.com/recaptcha/api.js?render=" + s.siteKey
+}
+
+func (s *stubRecaptchaVerifier) Verify(ctx context.Context, token, action, remoteIP string) error {
+	s.calls++
+	s.lastToken = token
+	s.lastAction = action
+	s.lastRemoteIP = remoteIP
+	if s.returnErr != nil {
+		return s.returnErr
+	}
+	if s.requireToken && token == "" {
+		return utils.ErrRecaptchaVerificationFailed
+	}
+	return nil
 }
 
 func newAuthHandlerTestEnv(t *testing.T) (*AuthHandler, *models.Client, *scs.SessionManager, *stubAuthEmailSender) {
@@ -63,7 +98,7 @@ func newAuthHandlerTestEnv(t *testing.T) (*AuthHandler, *models.Client, *scs.Ses
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
-	handler := NewAuthHandler(client, sessions, renderer, mailer, "https://app.example.com", true)
+	handler := NewAuthHandler(client, sessions, renderer, mailer, "https://app.example.com", true, nil)
 	return handler, client, sessions, mailer
 }
 
@@ -110,6 +145,31 @@ func createAuthTestUser(t *testing.T, client *models.Client, email, password str
 	return u
 }
 
+func TestRegisterGETRendersRecaptchaHTMXWiring(t *testing.T) {
+	handler, _, sessions, _ := newAuthHandlerTestEnv(t)
+	handler.Recaptcha = &stubRecaptchaVerifier{siteKey: "site-key"}
+
+	rec := performAuthRequest(sessions, handler.RegisterGET, http.MethodGet, "/register", nil)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		`https://www.google.com/recaptcha/api.js?render=site-key`,
+		`hx-trigger="recaptcha-verified"`,
+		`data-recaptcha-site-key="site-key"`,
+		`name="g-recaptcha-response"`,
+		`grecaptcha.ready`,
+		`requestRecaptchaToken(0)`,
+		`window.htmx.trigger(form, 'recaptcha-verified')`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected register body to contain %q, got: %s", want, body)
+		}
+	}
+}
+
 func TestRegisterPOSTRedirectsToVerifyAndSendsEmail(t *testing.T) {
 	handler, client, sessions, mailer := newAuthHandlerTestEnv(t)
 
@@ -141,6 +201,93 @@ func TestRegisterPOSTRedirectsToVerifyAndSendsEmail(t *testing.T) {
 	}
 	if u.EmailVerificationToken == nil || u.EmailVerificationExpiry == nil {
 		t.Fatalf("expected verification token and expiry, got token=%v expiry=%v", u.EmailVerificationToken, u.EmailVerificationExpiry)
+	}
+}
+
+func TestRegisterPOSTMissingRecaptchaTokenBlocksWhenConfigured(t *testing.T) {
+	handler, client, sessions, mailer := newAuthHandlerTestEnv(t)
+	recaptcha := &stubRecaptchaVerifier{siteKey: "site-key", requireToken: true}
+	handler.Recaptcha = recaptcha
+
+	rec := performAuthRequest(sessions, handler.RegisterPOST, http.MethodPost, "/register", url.Values{
+		"email":            {"recaptcha@example.com"},
+		"password":         {"Password123!"},
+		"password_confirm": {"Password123!"},
+	})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if recaptcha.calls != 1 {
+		t.Fatalf("recaptcha calls = %d, want 1", recaptcha.calls)
+	}
+	if mailer.htmlCalls != 0 {
+		t.Fatalf("htmlCalls = %d, want 0", mailer.htmlCalls)
+	}
+	exists, err := client.User.Query().Where(user.EmailEQ("recaptcha@example.com")).Exist(context.Background())
+	if err != nil {
+		t.Fatalf("query user error = %v", err)
+	}
+	if exists {
+		t.Fatal("user should not be created when recaptcha fails")
+	}
+	if !strings.Contains(rec.Body.String(), "We could not verify this signup") {
+		t.Fatalf("expected recaptcha failure message, got: %s", rec.Body.String())
+	}
+}
+
+func TestRegisterPOSTBrowserErrorShowsActionableRecaptchaMessage(t *testing.T) {
+	handler, _, sessions, _ := newAuthHandlerTestEnv(t)
+	handler.Recaptcha = &stubRecaptchaVerifier{
+		siteKey: "site-key",
+		returnErr: &utils.RecaptchaVerificationError{
+			Reason:     "google rejected token",
+			ErrorCodes: []string{"browser-error"},
+		},
+	}
+
+	rec := performAuthRequest(sessions, handler.RegisterPOST, http.MethodPost, "/register", url.Values{
+		"email":                {"browser-error@example.com"},
+		"password":             {"Password123!"},
+		"password_confirm":     {"Password123!"},
+		"g-recaptcha-response": {"token"},
+	})
+
+	if !strings.Contains(rec.Body.String(), "reCAPTCHA could not complete in this browser") {
+		t.Fatalf("expected actionable recaptcha message, got: %s", rec.Body.String())
+	}
+}
+
+func TestRegisterPOSTValidRecaptchaAllowsRegistration(t *testing.T) {
+	handler, client, sessions, _ := newAuthHandlerTestEnv(t)
+	recaptcha := &stubRecaptchaVerifier{siteKey: "site-key", requireToken: true}
+	handler.Recaptcha = recaptcha
+
+	rec := performAuthRequest(sessions, handler.RegisterPOST, http.MethodPost, "/register", url.Values{
+		"email":                {"recaptcha-valid@example.com"},
+		"password":             {"Password123!"},
+		"password_confirm":     {"Password123!"},
+		"g-recaptcha-response": {"valid-token"},
+	})
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusSeeOther, rec.Body.String())
+	}
+	if recaptcha.calls != 1 {
+		t.Fatalf("recaptcha calls = %d, want 1", recaptcha.calls)
+	}
+	if recaptcha.lastToken != "valid-token" {
+		t.Fatalf("recaptcha token = %q, want valid-token", recaptcha.lastToken)
+	}
+	if recaptcha.lastAction != "register" {
+		t.Fatalf("recaptcha action = %q, want register", recaptcha.lastAction)
+	}
+	exists, err := client.User.Query().Where(user.EmailEQ("recaptcha-valid@example.com")).Exist(context.Background())
+	if err != nil {
+		t.Fatalf("query user error = %v", err)
+	}
+	if !exists {
+		t.Fatal("user should be created when recaptcha succeeds")
 	}
 }
 
@@ -370,6 +517,85 @@ func TestForgotPasswordPOSTUnknownEmailGenericSuccess(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "Password reset email sent") {
 		t.Fatalf("expected generic success response, got: %s", rec.Body.String())
+	}
+}
+
+func TestForgotPasswordGETRendersRecaptchaHTMXWiring(t *testing.T) {
+	handler, _, sessions, _ := newAuthHandlerTestEnv(t)
+	handler.Recaptcha = &stubRecaptchaVerifier{siteKey: "site-key"}
+
+	rec := performAuthRequest(sessions, handler.ForgotPasswordGET, http.MethodGet, "/forgot-password", nil)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		`https://www.google.com/recaptcha/api.js?render=site-key`,
+		`hx-trigger="recaptcha-verified"`,
+		`data-recaptcha-site-key="site-key"`,
+		`name="g-recaptcha-response"`,
+		`grecaptcha.ready`,
+		`requestRecaptchaToken(0)`,
+		`window.htmx.trigger(form, 'recaptcha-verified')`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected forgot-password body to contain %q, got: %s", want, body)
+		}
+	}
+}
+
+func TestForgotPasswordPOSTMissingRecaptchaTokenBlocksWhenConfigured(t *testing.T) {
+	handler, _, sessions, mailer := newAuthHandlerTestEnv(t)
+	recaptcha := &stubRecaptchaVerifier{siteKey: "site-key", requireToken: true}
+	handler.Recaptcha = recaptcha
+
+	rec := performAuthRequest(sessions, handler.ForgotPasswordPOST, http.MethodPost, "/forgot-password", url.Values{
+		"email": {"reset-recaptcha@example.com"},
+	})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if recaptcha.calls != 1 {
+		t.Fatalf("recaptcha calls = %d, want 1", recaptcha.calls)
+	}
+	if recaptcha.lastAction != "forgot_password" {
+		t.Fatalf("recaptcha action = %q, want forgot_password", recaptcha.lastAction)
+	}
+	if mailer.resetCalls != 0 {
+		t.Fatalf("resetCalls = %d, want 0 when recaptcha fails", mailer.resetCalls)
+	}
+	if !strings.Contains(rec.Body.String(), "We could not verify this request") {
+		t.Fatalf("expected recaptcha failure message, got: %s", rec.Body.String())
+	}
+}
+
+func TestForgotPasswordPOSTValidRecaptchaSendsResetEmail(t *testing.T) {
+	handler, client, sessions, mailer := newAuthHandlerTestEnv(t)
+	createAuthTestUser(t, client, "recaptcha-reset@example.com", "Password123!", true)
+	recaptcha := &stubRecaptchaVerifier{siteKey: "site-key", requireToken: true}
+	handler.Recaptcha = recaptcha
+
+	rec := performAuthRequest(sessions, handler.ForgotPasswordPOST, http.MethodPost, "/forgot-password", url.Values{
+		"email":                {"recaptcha-reset@example.com"},
+		"g-recaptcha-response": {"valid-token"},
+	})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if recaptcha.calls != 1 {
+		t.Fatalf("recaptcha calls = %d, want 1", recaptcha.calls)
+	}
+	if recaptcha.lastToken != "valid-token" {
+		t.Fatalf("recaptcha token = %q, want valid-token", recaptcha.lastToken)
+	}
+	if recaptcha.lastAction != "forgot_password" {
+		t.Fatalf("recaptcha action = %q, want forgot_password", recaptcha.lastAction)
+	}
+	if mailer.resetCalls != 1 {
+		t.Fatalf("resetCalls = %d, want 1", mailer.resetCalls)
 	}
 }
 

@@ -21,6 +21,7 @@ func TestConfig_DefaultValues(t *testing.T) {
 	cfg.AWSSESRegion = "us-east-1"
 	cfg.AWSSESFromEmail = "noreply@localhost"
 	cfg.AWSSESFromDisplayName = "Gojang"
+	cfg.RecaptchaMinScore = 0.5
 
 	if cfg.Port != "8080" {
 		t.Errorf("Expected default port 8080, got %s", cfg.Port)
@@ -49,23 +50,32 @@ func TestConfig_DefaultValues(t *testing.T) {
 	if cfg.AWSSESRegion != "us-east-1" {
 		t.Errorf("Expected AWS SES region us-east-1, got %s", cfg.AWSSESRegion)
 	}
+
+	if cfg.RecaptchaMinScore != 0.5 {
+		t.Errorf("Expected recaptcha min score 0.5, got %f", cfg.RecaptchaMinScore)
+	}
 }
 
 func TestConfig_CustomValues(t *testing.T) {
 	cfg := &Config{
-		DatabaseURL:       "postgresql://localhost/testdb",
-		SessionKey:        "custom-session-key",
-		Debug:             true,
-		Port:              "3000",
-		AppBaseURL:        "https://app.example.com",
-		SessionLifetime:   24 * time.Hour,
-		SMTPHost:          "smtp.example.com",
-		SMTPPort:          465,
-		SMTPUser:          "user@example.com",
-		SMTPPass:          "password",
-		SMTPFrom:          "custom@example.com",
-		AWSSESAccessKeyID: "AKIA_TEST",
-		AWSSESRegion:      "us-west-2",
+		DatabaseURL:                  "postgresql://localhost/testdb",
+		SessionKey:                   "custom-session-key",
+		Debug:                        true,
+		Port:                         "3000",
+		AppBaseURL:                   "https://app.example.com",
+		SessionLifetime:              24 * time.Hour,
+		SMTPHost:                     "smtp.example.com",
+		SMTPPort:                     465,
+		SMTPUser:                     "user@example.com",
+		SMTPPass:                     "password",
+		SMTPFrom:                     "custom@example.com",
+		AWSSESAccessKeyID:            "AKIA_TEST",
+		AWSSESRegion:                 "us-west-2",
+		GoogleAnalyticsMeasurementID: "G-1234567890",
+		RecaptchaSiteKey:             "site-key",
+		RecaptchaSecretKey:           "secret-key",
+		RecaptchaMinScore:            0.7,
+		RecaptchaAllowedHostnames:    []string{"example.com", "*.example.com"},
 	}
 
 	if cfg.DatabaseURL != "postgresql://localhost/testdb" {
@@ -94,6 +104,26 @@ func TestConfig_CustomValues(t *testing.T) {
 
 	if cfg.AWSSESAccessKeyID != "AKIA_TEST" {
 		t.Errorf("Expected AWS SES access key to be configured")
+	}
+
+	if cfg.GoogleAnalyticsMeasurementID != "G-1234567890" {
+		t.Errorf("Expected Google Analytics measurement ID to be configured")
+	}
+
+	if cfg.RecaptchaSiteKey != "site-key" {
+		t.Errorf("Expected recaptcha site key site-key, got %s", cfg.RecaptchaSiteKey)
+	}
+
+	if cfg.RecaptchaSecretKey != "secret-key" {
+		t.Errorf("Expected recaptcha secret key secret-key, got %s", cfg.RecaptchaSecretKey)
+	}
+
+	if cfg.RecaptchaMinScore != 0.7 {
+		t.Errorf("Expected recaptcha min score 0.7, got %f", cfg.RecaptchaMinScore)
+	}
+
+	if len(cfg.RecaptchaAllowedHostnames) != 2 || cfg.RecaptchaAllowedHostnames[0] != "example.com" {
+		t.Errorf("Expected recaptcha allowed hostnames to be populated, got %#v", cfg.RecaptchaAllowedHostnames)
 	}
 }
 

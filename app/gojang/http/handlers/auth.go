@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -24,6 +27,12 @@ type authEmailSender interface {
 	SendPasswordResetEmail(to, resetURL string) error
 }
 
+type recaptchaVerifier interface {
+	SiteKey() string
+	ScriptURL() string
+	Verify(ctx context.Context, token, action, remoteIP string) error
+}
+
 type AuthHandler struct {
 	Client       *models.Client
 	Sessions     *scs.SessionManager
@@ -31,9 +40,10 @@ type AuthHandler struct {
 	EmailService authEmailSender
 	AppBaseURL   string
 	IsDebug      bool
+	Recaptcha    recaptchaVerifier
 }
 
-func NewAuthHandler(client *models.Client, sessions *scs.SessionManager, renderer *renderers.Renderer, emailService authEmailSender, appBaseURL string, debug bool) *AuthHandler {
+func NewAuthHandler(client *models.Client, sessions *scs.SessionManager, renderer *renderers.Renderer, emailService authEmailSender, appBaseURL string, debug bool, recaptcha recaptchaVerifier) *AuthHandler {
 	return &AuthHandler{
 		Client:       client,
 		Sessions:     sessions,
@@ -41,6 +51,7 @@ func NewAuthHandler(client *models.Client, sessions *scs.SessionManager, rendere
 		EmailService: emailService,
 		AppBaseURL:   appBaseURL,
 		IsDebug:      debug,
+		Recaptcha:    recaptcha,
 	}
 }
 
@@ -121,7 +132,7 @@ func (h *AuthHandler) LoginPOST(w http.ResponseWriter, r *http.Request) {
 
 // RegisterGET shows the registration form.
 func (h *AuthHandler) RegisterGET(w http.ResponseWriter, r *http.Request) {
-	h.Renderer.Render(w, r, "auth/register.html", nil)
+	h.renderRegister(w, r, nil, "")
 }
 
 // RegisterPOST handles registration submission.
@@ -139,13 +150,16 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 
 	errors := forms.Validate(form)
 	if len(errors) > 0 {
-		h.Renderer.Render(w, r, "auth/register.html", &renderers.TemplateData{
-			Errors: errors,
-			Data: map[string]interface{}{
-				"Email": form.Email,
-			},
-		})
+		h.renderRegister(w, r, errors, form.Email)
 		return
+	}
+
+	if h.recaptchaSiteKey() != "" {
+		if err := h.Recaptcha.Verify(r.Context(), r.Form.Get("g-recaptcha-response"), "register", requestRemoteIP(r)); err != nil {
+			logRecaptchaFailure("register", err)
+			h.renderRegister(w, r, map[string]string{"general": recaptchaErrorMessage(err, "We could not verify this signup. Please try again.")}, form.Email)
+			return
+		}
 	}
 
 	exists, err := h.Client.User.Query().Where(user.EmailEQ(form.Email)).Exist(r.Context())
@@ -154,12 +168,7 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		h.Renderer.Render(w, r, "auth/register.html", &renderers.TemplateData{
-			Errors: map[string]string{"Email": "Email already registered"},
-			Data: map[string]interface{}{
-				"Email": form.Email,
-			},
-		})
+		h.renderRegister(w, r, map[string]string{"Email": "Email already registered"}, form.Email)
 		return
 	}
 
@@ -188,6 +197,87 @@ func (h *AuthHandler) RegisterPOST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.redirect(w, r, "/register-verify-email")
+}
+
+func (h *AuthHandler) renderRegister(w http.ResponseWriter, r *http.Request, errors map[string]string, email string) {
+	data := map[string]interface{}{}
+	if email != "" {
+		data["Email"] = email
+	}
+	if siteKey := h.recaptchaSiteKey(); siteKey != "" {
+		data["RecaptchaSiteKey"] = siteKey
+		data["RecaptchaScriptURL"] = h.Recaptcha.ScriptURL()
+	}
+
+	h.Renderer.Render(w, r, "auth/register.html", &renderers.TemplateData{
+		Errors: errors,
+		Data:   data,
+	})
+}
+
+func (h *AuthHandler) recaptchaSiteKey() string {
+	if h.Recaptcha == nil {
+		return ""
+	}
+	return h.Recaptcha.SiteKey()
+}
+
+func requestRemoteIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil || !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() {
+		return ""
+	}
+	return ip.String()
+}
+
+func logRecaptchaFailure(scope string, err error) {
+	if scope == "" {
+		scope = "auth"
+	}
+	var verifyErr *utils.RecaptchaVerificationError
+	if errors.As(err, &verifyErr) {
+		utils.Warnw(scope+".recaptcha_failed",
+			"error", err,
+			"reason", verifyErr.Reason,
+			"detail", verifyErr.Detail,
+			"score", verifyErr.Score,
+			"min_score", verifyErr.MinScore,
+			"recaptcha_action", verifyErr.Action,
+			"expected_action", verifyErr.ExpectedAction,
+			"hostname", verifyErr.Hostname,
+			"google_error_codes", strings.Join(verifyErr.ErrorCodes, ","),
+			"status_code", verifyErr.StatusCode,
+		)
+		return
+	}
+	utils.Warnw(scope+".recaptcha_failed", "error", err)
+}
+
+func recaptchaErrorMessage(err error, genericMessage string) string {
+	if recaptchaErrorHasCode(err, "browser-error") {
+		return "reCAPTCHA could not complete in this browser. Please retry, disable browser blockers, or make sure this hostname is allowed for the site key."
+	}
+	return genericMessage
+}
+
+func recaptchaErrorHasCode(err error, code string) bool {
+	var verifyErr *utils.RecaptchaVerificationError
+	if !errors.As(err, &verifyErr) {
+		return false
+	}
+	for _, errorCode := range verifyErr.ErrorCodes {
+		if strings.EqualFold(strings.TrimSpace(errorCode), code) {
+			return true
+		}
+	}
+	return false
 }
 
 // LogoutPOST handles logout.
@@ -320,7 +410,7 @@ func (h *AuthHandler) sendPasswordResetEmail(r *http.Request, u *models.User) (s
 
 // ForgotPasswordGET shows the forgot password form.
 func (h *AuthHandler) ForgotPasswordGET(w http.ResponseWriter, r *http.Request) {
-	h.Renderer.Render(w, r, "auth/forgot_password.html", nil)
+	h.renderForgotPassword(w, r, nil, map[string]interface{}{})
 }
 
 // ForgotPasswordPOST handles forgot password submission.
@@ -332,13 +422,16 @@ func (h *AuthHandler) ForgotPasswordPOST(w http.ResponseWriter, r *http.Request)
 
 	form := forms.ForgotPasswordForm{Email: r.Form.Get("email")}
 	if errors := forms.Validate(form); len(errors) > 0 {
-		h.Renderer.Render(w, r, "auth/forgot_password.html", &renderers.TemplateData{
-			Errors: errors,
-			Data: map[string]interface{}{
-				"Email": form.Email,
-			},
-		})
+		h.renderForgotPassword(w, r, errors, map[string]interface{}{"Email": form.Email})
 		return
+	}
+
+	if h.recaptchaSiteKey() != "" {
+		if err := h.Recaptcha.Verify(r.Context(), r.Form.Get("g-recaptcha-response"), "forgot_password", requestRemoteIP(r)); err != nil {
+			logRecaptchaFailure("forgot_password", err)
+			h.renderForgotPassword(w, r, map[string]string{"general": recaptchaErrorMessage(err, "We could not verify this request. Please try again.")}, map[string]interface{}{"Email": form.Email})
+			return
+		}
 	}
 
 	debugURL := ""
@@ -357,12 +450,25 @@ func (h *AuthHandler) ForgotPasswordPOST(w http.ResponseWriter, r *http.Request)
 		utils.Debugw("password_reset.user_not_found", "error", err)
 	}
 
+	h.renderForgotPassword(w, r, nil, map[string]interface{}{
+		"Email":     form.Email,
+		"EmailSent": true,
+		"DebugURL":  debugURL,
+	})
+}
+
+func (h *AuthHandler) renderForgotPassword(w http.ResponseWriter, r *http.Request, errors map[string]string, data map[string]interface{}) {
+	if data == nil {
+		data = map[string]interface{}{}
+	}
+	if siteKey := h.recaptchaSiteKey(); siteKey != "" {
+		data["RecaptchaSiteKey"] = siteKey
+		data["RecaptchaScriptURL"] = h.Recaptcha.ScriptURL()
+	}
+
 	h.Renderer.Render(w, r, "auth/forgot_password.html", &renderers.TemplateData{
-		Data: map[string]interface{}{
-			"Email":     form.Email,
-			"EmailSent": true,
-			"DebugURL":  debugURL,
-		},
+		Errors: errors,
+		Data:   data,
 	})
 }
 

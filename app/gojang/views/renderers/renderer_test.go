@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gojangframework/gojang/app/gojang/config"
 )
 
 func TestNewRendererLoadsEmbeddedTemplates(t *testing.T) {
@@ -77,6 +79,53 @@ func TestRenderTranslatedHTMXPartial(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Crear nueva publicacion") {
 		t.Fatalf("expected translated partial content, got: %s", body)
+	}
+}
+
+func TestRenderIncludesGoogleAnalyticsWhenConfigured(t *testing.T) {
+	renderer, err := NewRenderer(false, WithGoogleIntegrations(&config.Config{
+		GoogleAnalyticsMeasurementID: "G-1234567890",
+	}))
+	if err != nil {
+		t.Fatalf("NewRenderer(false) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	if err := renderer.Render(rec, req, "home.html", nil); err != nil {
+		t.Fatalf("Render returned error: %v", err)
+	}
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		"https://www.googletagmanager.com/gtag/js?id=G-1234567890",
+		"gtag('config', 'G-1234567890')",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected rendered body to include %q, got: %s", want, body)
+		}
+	}
+}
+
+func TestRenderExcludesGoogleAnalyticsInDebug(t *testing.T) {
+	renderer, err := NewRenderer(true, WithGoogleIntegrations(&config.Config{
+		Debug:                        true,
+		GoogleAnalyticsMeasurementID: "G-1234567890",
+	}))
+	if err != nil {
+		t.Fatalf("NewRenderer(true) returned error: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	if err := renderer.Render(rec, req, "home.html", nil); err != nil {
+		t.Fatalf("Render returned error: %v", err)
+	}
+
+	if body := rec.Body.String(); strings.Contains(body, "googletagmanager.com") || strings.Contains(body, "G-1234567890") {
+		t.Fatalf("expected debug render to omit analytics, got: %s", body)
 	}
 }
 

@@ -1,12 +1,31 @@
 {{define "title"}}{{t . "create_account_title"}}{{end}}
 
+{{define "head"}}
+{{if .Data}}{{with index .Data "RecaptchaScriptURL"}}
+    <link rel="preconnect" href="https://www.google.com">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <script>
+        window.grecaptcha = window.grecaptcha || {};
+        window.___grecaptcha_cfg = window.___grecaptcha_cfg || {};
+        window.___grecaptcha_cfg.fns = window.___grecaptcha_cfg.fns || [];
+        window.grecaptcha.ready = window.grecaptcha.ready || function(callback) {
+            window.___grecaptcha_cfg.fns.push(callback);
+        };
+    </script>
+    <script async defer src="{{.}}"></script>
+{{end}}{{end}}
+{{end}}
+
 {{define "content"}}
 <div class="auth-container">
     <div class="auth-box">
         <h2>{{t . "create_account"}}</h2>
         
-        <form hx-post="/register" hx-target="#content" hx-swap="innerHTML" class="form">
+        <form id="register-form" method="post" action="/register" hx-post="/register" hx-target="#content" hx-swap="innerHTML" class="form"{{if .Data}}{{with index .Data "RecaptchaSiteKey"}} hx-trigger="recaptcha-verified" data-recaptcha-site-key="{{.}}"{{end}}{{end}}>
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            {{if .Data}}{{with index .Data "RecaptchaSiteKey"}}
+                <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response" value="">
+            {{end}}{{end}}
             
             <div class="form-group">
                 <label for="email">{{t . "email"}}</label>
@@ -38,9 +57,113 @@
                     {{index .Errors "general"}}
                 </div>
             {{end}}
+            <div id="register-recaptcha-error" class="alert alert-error" hidden></div>
 
             <button type="submit" class="btn btn-primary">{{t . "create_account"}}</button>
         </form>
+
+        {{if .Data}}{{with index .Data "RecaptchaSiteKey"}}
+        <script>
+            (function() {
+                var form = document.getElementById('register-form');
+                if (!form || form.dataset.recaptchaBound === 'true') {
+                    return;
+                }
+                form.dataset.recaptchaBound = 'true';
+
+                form.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (form.dataset.recaptchaPending === 'true') {
+                        return;
+                    }
+
+                    var siteKey = form.dataset.recaptchaSiteKey;
+                    var tokenInput = document.getElementById('g-recaptcha-response');
+                    var errorBox = document.getElementById('register-recaptcha-error');
+                    var submitButton = form.querySelector('button[type="submit"]');
+                    var recaptchaClient = window.grecaptcha;
+                    if (!siteKey || !tokenInput || !recaptchaClient) {
+                        showRecaptchaError(errorBox);
+                        return;
+                    }
+                    tokenInput.value = '';
+                    if (errorBox) {
+                        errorBox.hidden = true;
+                    }
+
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                    }
+                    form.dataset.recaptchaPending = 'true';
+                    var timedOut = false;
+                    var timeoutID = window.setTimeout(function() {
+                        timedOut = true;
+                        resetRecaptchaState(submitButton);
+                        showRecaptchaError(errorBox);
+                    }, 10000);
+
+                    recaptchaClient.ready(function() {
+                        if (timedOut) {
+                            return;
+                        }
+                        if (!recaptchaClient.execute) {
+                            window.clearTimeout(timeoutID);
+                            resetRecaptchaState(submitButton);
+                            showRecaptchaError(errorBox);
+                            return;
+                        }
+                        requestRecaptchaToken(0);
+                    });
+
+                    function requestRecaptchaToken(attempt) {
+                        recaptchaClient.execute(siteKey, {action: 'register'}).then(function(token) {
+                            if (timedOut) {
+                                return;
+                            }
+                            window.clearTimeout(timeoutID);
+                            tokenInput.value = token;
+                            if (window.htmx) {
+                                window.htmx.trigger(form, 'recaptcha-verified');
+                            } else {
+                                form.submit();
+                            }
+                        }).catch(function() {
+                            if (timedOut) {
+                                return;
+                            }
+                            if (attempt < 1) {
+                                requestRecaptchaToken(attempt + 1);
+                                return;
+                            }
+                            window.clearTimeout(timeoutID);
+                            resetRecaptchaState(submitButton);
+                            showRecaptchaError(errorBox);
+                        });
+                    }
+                });
+
+                function showRecaptchaError(errorBox) {
+                    if (!errorBox) {
+                        return;
+                    }
+                    errorBox.textContent = 'We could not verify this signup. Please try again.';
+                    errorBox.hidden = false;
+                }
+
+                function resetRecaptchaState(submitButton) {
+                    form.dataset.recaptchaPending = '';
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+
+                form.addEventListener('htmx:afterRequest', function() {
+                    resetRecaptchaState(form.querySelector('button[type="submit"]'));
+                });
+            })();
+        </script>
+        {{end}}{{end}}
 
         <p class="auth-footer">
             {{t . "already_have_account"}} <a href="/login">{{t . "login_here"}}</a>

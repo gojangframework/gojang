@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <meta name="csrf-token" content="{{.CSRFToken}}">
+    {{if .GoogleAnalyticsMeasurementID}}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{.GoogleAnalyticsMeasurementID}}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{.GoogleAnalyticsMeasurementID}}');
+    </script>
+    {{end}}
+    {{block "head" .}}{{end}}
     <script>
         document.addEventListener('htmx:configRequest', function(evt) {
             const token = document.querySelector('meta[name="csrf-token"]');

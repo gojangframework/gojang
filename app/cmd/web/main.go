@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -42,6 +44,13 @@ func main() {
 	}
 	if err := utils.Init(lvl); err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
+	}
+	if err := validateRecaptchaConfig(cfg); err != nil {
+		utils.Errorf("Invalid reCAPTCHA configuration: %v", err)
+		os.Exit(1)
+	}
+	if recaptchaPartiallyConfigured(cfg) {
+		utils.Warnf("reCAPTCHA disabled: configure both RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to protect registrations")
 	}
 
 	// Setup database
@@ -104,7 +113,7 @@ func main() {
 
 	// Setup renderers
 	// Public renderer: Handles public site pages with base.html wrapper
-	publicRenderer, err := renderers.NewRenderer(cfg.Debug, renderers.WithSessionManager(sessionManager))
+	publicRenderer, err := renderers.NewRenderer(cfg.Debug, renderers.WithSessionManager(sessionManager), renderers.WithGoogleIntegrations(cfg))
 	if err != nil {
 		utils.Errorf("Failed to setup public renderer: %v", err)
 		os.Exit(1)
@@ -118,7 +127,13 @@ func main() {
 	}
 
 	// Setup handlers
-	authHandler := handlers.NewAuthHandler(client, sessionManager, publicRenderer, emailService, cfg.AppBaseURL, cfg.Debug)
+	recaptchaVerifier := utils.NewRecaptchaVerifier(utils.RecaptchaConfig{
+		SiteKey:          cfg.RecaptchaSiteKey,
+		SecretKey:        cfg.RecaptchaSecretKey,
+		MinScore:         cfg.RecaptchaMinScore,
+		AllowedHostnames: recaptchaAllowedHostnames(cfg),
+	})
+	authHandler := handlers.NewAuthHandler(client, sessionManager, publicRenderer, emailService, cfg.AppBaseURL, cfg.Debug, recaptchaVerifier)
 	userHandler := handlers.NewUserHandler(client, publicRenderer)
 	postHandler := posts.NewPostHandler(client, publicRenderer)
 	pageHandler := pages.NewPageHandler(publicRenderer)
@@ -230,4 +245,36 @@ func main() {
 	}
 
 	utils.Infof("✅ Server stopped")
+}
+
+func recaptchaAllowedHostnames(cfg *config.Config) []string {
+	if cfg == nil {
+		return nil
+	}
+
+	hosts := append([]string(nil), cfg.RecaptchaAllowedHostnames...)
+	hosts = append(hosts, cfg.AllowedHosts...)
+	if appURL, err := url.Parse(strings.TrimSpace(cfg.AppBaseURL)); err == nil && appURL.Hostname() != "" {
+		hosts = append(hosts, appURL.Hostname())
+	}
+	if cfg.Debug {
+		hosts = append(hosts, "localhost", "127.0.0.1", "::1")
+	}
+	return hosts
+}
+
+func validateRecaptchaConfig(cfg *config.Config) error {
+	if cfg == nil || cfg.Debug || !recaptchaPartiallyConfigured(cfg) {
+		return nil
+	}
+	return fmt.Errorf("configure both RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY, or leave both empty")
+}
+
+func recaptchaPartiallyConfigured(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	hasSiteKey := strings.TrimSpace(cfg.RecaptchaSiteKey) != ""
+	hasSecretKey := strings.TrimSpace(cfg.RecaptchaSecretKey) != ""
+	return hasSiteKey != hasSecretKey
 }
