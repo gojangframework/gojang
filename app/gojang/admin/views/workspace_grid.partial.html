@@ -11,7 +11,11 @@
            aria-current="page">Grid view</a>
         {{if $grid.Related.Valid}}
         <span class="related-filter-chip">
+            {{if $grid.Related.SourceLabel}}
+            {{$config.NamePlural}} for {{$grid.Related.SourceLabel}}
+            {{else}}
             Related {{$config.NamePlural | lower}} from {{$grid.Related.SourceResource}} {{$grid.Related.SourceField.Label}}
+            {{end}}
             <a href="/admin/t/{{$config.Name | lower}}?{{gridQueryWithoutRelated $grid 1}}"
                hx-get="/admin/t/{{$config.Name | lower}}/grid?{{gridQueryWithoutRelated $grid 1}}"
                hx-target="#workspace-grid"

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/gojangframework/gojang/app/gojang/utils"
 	"github.com/google/uuid"
 
@@ -61,6 +62,7 @@ type RelatedFilter struct {
 	SourceResource string
 	SourceField    FieldConfig
 	SourceID       uuid.UUID
+	SourceLabel    string
 	Valid          bool
 }
 
@@ -430,10 +432,14 @@ func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resou
 
 func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, filter GridFilter, sortState GridSort, related RelatedFilter, limit, offset int) ([]interface{}, int, error) {
 	if related.Valid {
-		if !filter.Valid && !sortState.Valid {
-			return h.queryRelatedRecordsPaginated(r, related, limit, offset)
+		records, totalCount, pushedDown, err := h.tryQueryRelatedRecordsPaginated(r, related, filter, sortState, limit, offset)
+		if err != nil {
+			return nil, 0, err
 		}
-		records, err := h.queryRelatedRecords(r, related)
+		if pushedDown {
+			return records, totalCount, nil
+		}
+		records, err = h.queryRelatedRecords(r, related)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -443,7 +449,7 @@ func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, fi
 		if sortState.Valid {
 			sortRecords(records, sortState)
 		}
-		totalCount := len(records)
+		totalCount = len(records)
 		return paginateRecords(records, totalCount, limit, offset), totalCount, nil
 	}
 
@@ -502,10 +508,17 @@ func (h *Handler) parseRelatedFilter(r *http.Request, targetConfig *ModelConfig)
 	if !ok || !sourceField.Relation || sourceField.RelationTarget != targetConfig.Name {
 		return RelatedFilter{}
 	}
+	sourceLabel := ""
+	if sourceConfig.QueryByID != nil {
+		if sourceRecord, err := sourceConfig.QueryByID(r.Context(), sourceID); err == nil {
+			sourceLabel = cellLabel(sourceRecord)
+		}
+	}
 	return RelatedFilter{
 		SourceResource: sourceConfig.Name,
 		SourceField:    sourceField,
 		SourceID:       sourceID,
+		SourceLabel:    sourceLabel,
 		Valid:          true,
 	}
 }
@@ -516,24 +529,96 @@ func (h *Handler) queryRelatedRecords(r *http.Request, related RelatedFilter) ([
 }
 
 func (h *Handler) queryRelatedRecordsPaginated(r *http.Request, related RelatedFilter, limit, offset int) ([]interface{}, int, error) {
-	return h.queryRelatedRecordsWithMode(r, related, limit, offset, true)
+	records, totalCount, _, err := h.tryQueryRelatedRecordsPaginated(r, related, GridFilter{}, GridSort{}, limit, offset)
+	return records, totalCount, err
 }
 
 func (h *Handler) queryRelatedRecordsWithMode(r *http.Request, related RelatedFilter, limit, offset int, paginated bool) ([]interface{}, int, error) {
-	sourceConfig, err := h.Registry.Get(related.SourceResource)
+	sourceRecord, targetConfig, err := h.relatedQueryContext(r, related)
 	if err != nil {
 		return nil, 0, err
+	}
+	newQuery := h.relatedQueryFactory(r, related, sourceRecord, targetConfig)
+	query, err := newQuery()
+	if err != nil {
+		return nil, 0, err
+	}
+	records, err := callQueryAll(r.Context(), query, related)
+	if err != nil {
+		return nil, 0, err
+	}
+	return records, len(records), nil
+}
+
+func (h *Handler) tryQueryRelatedRecordsPaginated(r *http.Request, related RelatedFilter, filter GridFilter, sortState GridSort, limit, offset int) ([]interface{}, int, bool, error) {
+	sourceRecord, targetConfig, err := h.relatedQueryContext(r, related)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	newQuery := h.relatedQueryFactory(r, related, sourceRecord, targetConfig)
+
+	countQuery, err := newQuery()
+	if err != nil {
+		return nil, 0, false, err
+	}
+	countQuery, supported, err := applyRelatedQueryFilter(countQuery, filter, related)
+	if err != nil || !supported {
+		return nil, 0, supported, err
+	}
+	totalCount, err := callQueryCount(r.Context(), countQuery, related)
+	if err != nil {
+		return nil, 0, false, err
+	}
+
+	pageQuery, err := newQuery()
+	if err != nil {
+		return nil, 0, false, err
+	}
+	pageQuery, supported, err = applyRelatedQueryFilter(pageQuery, filter, related)
+	if err != nil || !supported {
+		return nil, 0, supported, err
+	}
+	pageQuery, supported, err = applyRelatedQuerySort(pageQuery, sortState, related)
+	if err != nil || !supported {
+		return nil, 0, supported, err
+	}
+	if limit > 0 {
+		pageQuery, err = callQueryIntMethod(pageQuery, "Limit", limit, related)
+		if err != nil {
+			return nil, 0, false, err
+		}
+	}
+	if offset > 0 {
+		pageQuery, err = callQueryIntMethod(pageQuery, "Offset", offset, related)
+		if err != nil {
+			return nil, 0, false, err
+		}
+	}
+	records, err := callQueryAll(r.Context(), pageQuery, related)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	return records, totalCount, true, nil
+}
+
+func (h *Handler) relatedQueryContext(r *http.Request, related RelatedFilter) (interface{}, *ModelConfig, error) {
+	sourceConfig, err := h.Registry.Get(related.SourceResource)
+	if err != nil {
+		return nil, nil, err
 	}
 	targetConfig, err := h.Registry.Get(related.SourceField.RelationTarget)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	sourceRecord, err := sourceConfig.QueryByID(r.Context(), related.SourceID)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
+	return sourceRecord, targetConfig, nil
+}
 
-	newQuery := func() (interface{}, error) {
+func (h *Handler) relatedQueryFactory(r *http.Request, related RelatedFilter, sourceRecord interface{}, targetConfig *ModelConfig) func() (interface{}, error) {
+	return func() (interface{}, error) {
 		recordValue := reflect.ValueOf(sourceRecord)
 		queryMethod := recordValue.MethodByName("Query" + related.SourceField.Name)
 		if !queryMethod.IsValid() {
@@ -552,49 +637,122 @@ func (h *Handler) queryRelatedRecordsWithMode(r *http.Request, related RelatedFi
 		}
 		return query, nil
 	}
+}
 
-	if paginated {
-		countQuery, err := newQuery()
-		if err != nil {
-			return nil, 0, err
-		}
-		totalCount, err := callQueryCount(r.Context(), countQuery, related)
-		if err != nil {
-			return nil, 0, err
-		}
+func applyRelatedQueryFilter(query interface{}, filter GridFilter, related RelatedFilter) (interface{}, bool, error) {
+	if !filter.Valid {
+		return query, true, nil
+	}
+	predicate, supported, err := relatedQueryFilterPredicate(filter, related)
+	if err != nil {
+		return nil, false, err
+	}
+	if !supported {
+		return query, false, nil
+	}
+	query, err = callQueryWhere(query, predicate, related)
+	if err != nil {
+		return nil, false, err
+	}
+	return query, true, nil
+}
 
-		pageQuery, err := newQuery()
-		if err != nil {
-			return nil, 0, err
+func applyRelatedQuerySort(query interface{}, sortState GridSort, related RelatedFilter) (interface{}, bool, error) {
+	if !sortState.Valid {
+		return query, true, nil
+	}
+	column := fieldColumnName(sortState.Field)
+	if column == "" || sortState.Field.Relation || sortState.Field.Virtual {
+		return query, false, nil
+	}
+	query, err := callQueryOrder(query, column, sortState.Dir, related)
+	if err != nil {
+		return nil, false, err
+	}
+	return query, true, nil
+}
+
+func relatedQueryFilterPredicate(filter GridFilter, related RelatedFilter) (func(*entsql.Selector), bool, error) {
+	column := fieldColumnName(filter.Field)
+	if column == "" || filter.Field.Relation || filter.Field.Virtual {
+		return nil, false, nil
+	}
+	switch filter.Op {
+	case "equals":
+		value, supported, err := queryFilterEqualValue(filter.Field, filter.Value)
+		if err != nil || !supported {
+			return nil, supported, err
 		}
-		if limit > 0 {
-			pageQuery, err = callQueryIntMethod(pageQuery, "Limit", limit, related)
-			if err != nil {
-				return nil, 0, err
+		return entsql.FieldEQ(column, value), true, nil
+	default:
+		if !fieldSupportsContains(filter.Field) {
+			return nil, false, nil
+		}
+		return entsql.FieldContainsFold(column, filter.Value), true, nil
+	}
+}
+
+func fieldSupportsContains(field FieldConfig) bool {
+	switch field.Type {
+	case FieldTypeString, FieldTypeText, FieldTypeEmail, FieldTypePassword:
+		return true
+	default:
+		return false
+	}
+}
+
+func queryFilterEqualValue(field FieldConfig, raw string) (interface{}, bool, error) {
+	if field.Name == "ID" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, true, fmt.Errorf("%s must be a valid UUID", field.Label)
+		}
+		return id, true, nil
+	}
+	switch field.Type {
+	case FieldTypeString, FieldTypeText, FieldTypeEmail, FieldTypePassword:
+		return raw, true, nil
+	case FieldTypeBool:
+		switch strings.ToLower(strings.TrimSpace(raw)) {
+		case "true", "1", "yes", "on", "✓":
+			return true, true, nil
+		case "false", "0", "no", "off", "✗":
+			return false, true, nil
+		default:
+			return nil, true, fmt.Errorf("%s must be true or false", field.Label)
+		}
+	case FieldTypeInt:
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return nil, true, fmt.Errorf("%s must be a whole number", field.Label)
+		}
+		return value, true, nil
+	case FieldTypeFloat:
+		value, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			return nil, true, fmt.Errorf("%s must be a number", field.Label)
+		}
+		return value, true, nil
+	case FieldTypeTime:
+		for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05", "2006-01-02", time.RFC3339, "Jan 2, 2006 3:04 PM"} {
+			if value, err := time.Parse(layout, raw); err == nil {
+				return value, true, nil
 			}
 		}
-		if offset > 0 {
-			pageQuery, err = callQueryIntMethod(pageQuery, "Offset", offset, related)
-			if err != nil {
-				return nil, 0, err
-			}
-		}
-		records, err := callQueryAll(r.Context(), pageQuery, related)
-		if err != nil {
-			return nil, 0, err
-		}
-		return records, totalCount, nil
+		return nil, true, fmt.Errorf("%s must be a valid date/time", field.Label)
+	default:
+		return nil, false, nil
 	}
+}
 
-	query, err := newQuery()
-	if err != nil {
-		return nil, 0, err
+func fieldColumnName(field FieldConfig) string {
+	if field.Column != "" {
+		return field.Column
 	}
-	records, err := callQueryAll(r.Context(), query, related)
-	if err != nil {
-		return nil, 0, err
+	if field.Name == "ID" {
+		return "id"
 	}
-	return records, len(records), nil
+	return camelToSnake(field.Name)
 }
 
 func callQueryCount(ctx context.Context, query interface{}, related RelatedFilter) (int, error) {
@@ -611,6 +769,77 @@ func callQueryCount(ctx context.Context, query interface{}, related RelatedFilte
 		return 0, countResults[1].Interface().(error)
 	}
 	return int(countResults[0].Int()), nil
+}
+
+func callQueryWhere(query interface{}, predicate func(*entsql.Selector), related RelatedFilter) (interface{}, error) {
+	queryVal := reflect.ValueOf(query)
+	whereMethod := queryVal.MethodByName("Where")
+	if !whereMethod.IsValid() {
+		return nil, fmt.Errorf("related query %s.%s cannot apply filter", related.SourceResource, related.SourceField.Name)
+	}
+	predicateValue, err := makeQueryFuncArg(whereMethod, predicate)
+	if err != nil {
+		return nil, fmt.Errorf("related query %s.%s filter predicate: %w", related.SourceResource, related.SourceField.Name, err)
+	}
+	whereResults := whereMethod.Call([]reflect.Value{predicateValue})
+	if len(whereResults) != 1 {
+		return nil, fmt.Errorf("related query %s.%s returned unexpected filter values", related.SourceResource, related.SourceField.Name)
+	}
+	return whereResults[0].Interface(), nil
+}
+
+func callQueryOrder(query interface{}, column, direction string, related RelatedFilter) (interface{}, error) {
+	queryVal := reflect.ValueOf(query)
+	orderMethod := queryVal.MethodByName("Order")
+	if !orderMethod.IsValid() {
+		return nil, fmt.Errorf("related query %s.%s cannot apply sort", related.SourceResource, related.SourceField.Name)
+	}
+	orderFn := func(selector *entsql.Selector) {
+		opts := []entsql.OrderTermOption{entsql.OrderAsc()}
+		if direction == "desc" {
+			opts = []entsql.OrderTermOption{entsql.OrderDesc()}
+		}
+		entsql.OrderByField(column, opts...).ToFunc()(selector)
+	}
+	orderValue, err := makeQueryFuncArg(orderMethod, orderFn)
+	if err != nil {
+		return nil, fmt.Errorf("related query %s.%s sort option: %w", related.SourceResource, related.SourceField.Name, err)
+	}
+	orderResults := orderMethod.Call([]reflect.Value{orderValue})
+	if len(orderResults) != 1 {
+		return nil, fmt.Errorf("related query %s.%s returned unexpected sort values", related.SourceResource, related.SourceField.Name)
+	}
+	return orderResults[0].Interface(), nil
+}
+
+func makeQueryFuncArg(method reflect.Value, fn interface{}) (reflect.Value, error) {
+	methodType := method.Type()
+	if !methodType.IsVariadic() || methodType.NumIn() != 1 {
+		return reflect.Value{}, fmt.Errorf("unexpected method signature")
+	}
+	sliceType := methodType.In(0)
+	if sliceType.Kind() != reflect.Slice {
+		return reflect.Value{}, fmt.Errorf("unexpected variadic argument type %s", sliceType)
+	}
+	funcType := sliceType.Elem()
+	if funcType.Kind() != reflect.Func || funcType.NumIn() != 1 || funcType.NumOut() != 0 {
+		return reflect.Value{}, fmt.Errorf("unexpected function argument type %s", funcType)
+	}
+	sourceValue := reflect.ValueOf(fn)
+	if sourceValue.Type().AssignableTo(funcType) {
+		return sourceValue, nil
+	}
+	if sourceValue.Type().ConvertibleTo(funcType) {
+		return sourceValue.Convert(funcType), nil
+	}
+	return reflect.MakeFunc(funcType, func(args []reflect.Value) []reflect.Value {
+		if len(args) == 1 && !args[0].IsNil() {
+			if selector, ok := args[0].Interface().(*entsql.Selector); ok {
+				sourceValue.Call([]reflect.Value{reflect.ValueOf(selector)})
+			}
+		}
+		return nil
+	}), nil
 }
 
 func callQueryIntMethod(query interface{}, methodName string, value int, related RelatedFilter) (interface{}, error) {

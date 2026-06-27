@@ -37,6 +37,7 @@ type clearFieldValue struct{}
 // FieldConfig defines configuration for a single field
 type FieldConfig struct {
 	Name      string      // Field name (database column)
+	Column    string      // Database column name for scalar Ent fields
 	Label     string      // Display label
 	Type      FieldType   // Field type
 	Required  bool        // Is field required?

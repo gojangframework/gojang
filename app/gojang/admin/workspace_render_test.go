@@ -413,6 +413,7 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 			}
 			return fakeRelatedSource{
 				ID:    sourceID,
+				Name:  "Primary source",
 				Items: items,
 				Stats: stats,
 			}, nil
@@ -452,7 +453,7 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 	}
 	body := w.Body.String()
 	for _, want := range []string{
-		"Related items from Source Items",
+		"Items for Primary source",
 		"modified-item-21",
 		"Page 2 of 2",
 		`name="related_from" value="Source"`,
@@ -481,6 +482,70 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 	}
 	if len(stats.offsets) != 1 || stats.offsets[0] != 20 {
 		t.Fatalf("expected related query to apply offset 20, got %v", stats.offsets)
+	}
+}
+
+func TestRelatedGridPushesFilterAndSortIntoQuery(t *testing.T) {
+	sourceID := uuid.New()
+	stats := &fakeRelatedQueryStats{}
+	items := []fakeRelatedItem{
+		{ID: uuid.New(), Name: "alpha"},
+		{ID: uuid.New(), Name: "beta"},
+	}
+	registry := &Registry{models: map[string]*ModelConfig{}}
+	registry.register(&ModelConfig{
+		Name:       "Source",
+		NamePlural: "Sources",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Items", Label: "Items", Type: FieldTypeSelect, Readonly: true, Visible: true, Relation: true, RelationTarget: "Item", RelationMany: true},
+		},
+		QueryByID: func(ctx context.Context, got uuid.UUID) (interface{}, error) {
+			if got != sourceID {
+				t.Fatalf("expected source ID %s, got %s", sourceID, got)
+			}
+			return fakeRelatedSource{
+				ID:    sourceID,
+				Name:  "Primary source",
+				Items: items,
+				Stats: stats,
+			}, nil
+		},
+	})
+	registry.register(&ModelConfig{
+		Name:       "Item",
+		NamePlural: "Items",
+		Fields: []FieldConfig{
+			{Name: "ID", Column: "id", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Name", Column: "name", Label: "Name", Type: FieldTypeString, Editable: true, Visible: true, Width: 220, Sortable: true, Filterable: true},
+		},
+		ListFields: []string{"ID", "Name"},
+	})
+
+	renderer, err := NewAdminRenderer(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(registry, renderer, nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&page=1&per_page=20&related_from=Source&related_field=Items&related_id="+sourceID.String()+"&filter_field=Name&filter_op=contains&filter_value=a&sort_field=Name&sort_dir=desc", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("resource", "item")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	handler.Grid(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if stats.whereCalls != 2 {
+		t.Fatalf("expected related count and page queries to apply filters, got %d", stats.whereCalls)
+	}
+	if stats.orderCalls != 1 {
+		t.Fatalf("expected related page query to apply sort, got %d", stats.orderCalls)
+	}
+	if stats.allCalls != 1 || stats.countCalls != 1 {
+		t.Fatalf("expected optimized related query path, got all=%d count=%d", stats.allCalls, stats.countCalls)
 	}
 }
 
@@ -656,6 +721,7 @@ func reflectValueOfWhere(query *fakePredicateQuery) reflect.Value {
 
 type fakeRelatedSource struct {
 	ID    uuid.UUID
+	Name  string
 	Items []fakeRelatedItem
 	Stats *fakeRelatedQueryStats
 }
@@ -680,15 +746,35 @@ type fakeRelatedItemQuery struct {
 type fakeRelatedQueryStats struct {
 	countCalls int
 	allCalls   int
+	whereCalls int
+	orderCalls int
 	limits     []int
 	offsets    []int
 }
+
+type fakeRelatedPredicate func(*sql.Selector)
+
+type fakeRelatedOrder func(*sql.Selector)
 
 func (q *fakeRelatedItemQuery) Count(ctx context.Context) (int, error) {
 	if q.stats != nil {
 		q.stats.countCalls++
 	}
 	return len(q.records), nil
+}
+
+func (q *fakeRelatedItemQuery) Where(predicates ...fakeRelatedPredicate) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.whereCalls += len(predicates)
+	}
+	return q
+}
+
+func (q *fakeRelatedItemQuery) Order(orders ...fakeRelatedOrder) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.orderCalls += len(orders)
+	}
+	return q
 }
 
 func (q *fakeRelatedItemQuery) Limit(limit int) *fakeRelatedItemQuery {
