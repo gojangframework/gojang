@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -393,6 +394,11 @@ func TestGridFieldSelectionFilterAndSortAffectRows(t *testing.T) {
 
 func TestGridCanOpenRelatedRecords(t *testing.T) {
 	sourceID := uuid.New()
+	stats := &fakeRelatedQueryStats{}
+	items := make([]fakeRelatedItem, 21)
+	for i := range items {
+		items[i] = fakeRelatedItem{ID: uuid.New(), Name: fmt.Sprintf("item-%02d", i+1)}
+	}
 	registry := &Registry{models: map[string]*ModelConfig{}}
 	registry.register(&ModelConfig{
 		Name:       "Source",
@@ -406,11 +412,9 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 				t.Fatalf("expected source ID %s, got %s", sourceID, got)
 			}
 			return fakeRelatedSource{
-				ID: sourceID,
-				Items: []fakeRelatedItem{
-					{ID: uuid.New(), Name: "alpha"},
-					{ID: uuid.New(), Name: "beta"},
-				},
+				ID:    sourceID,
+				Items: items,
+				Stats: stats,
 			}, nil
 		},
 	})
@@ -435,7 +439,7 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := NewHandler(registry, renderer, nil)
-	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&related_from=Source&related_field=Items&related_id="+sourceID.String(), nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&page=2&per_page=20&related_from=Source&related_field=Items&related_id="+sourceID.String(), nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("resource", "item")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -449,8 +453,8 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		"Related items from Source Items",
-		"modified-alpha",
-		"modified-beta",
+		"modified-item-21",
+		"Page 2 of 2",
 		`name="related_from" value="Source"`,
 		`name="related_field" value="Items"`,
 		`name="related_id" value="` + sourceID.String() + `"`,
@@ -461,10 +465,22 @@ func TestGridCanOpenRelatedRecords(t *testing.T) {
 			t.Fatalf("expected related grid to contain %q, got %s", want, body)
 		}
 	}
+	if strings.Contains(body, "modified-item-01") {
+		t.Fatalf("expected related grid to render only the requested page, got %s", body)
+	}
 	for _, unwanted := range []string{`>+ Add record</button>`, `new-record-row`, `Add a new item`} {
 		if strings.Contains(body, unwanted) {
 			t.Fatalf("expected related grid to hide create affordance %q, got %s", unwanted, body)
 		}
+	}
+	if stats.countCalls != 1 || stats.allCalls != 1 {
+		t.Fatalf("expected one related count and one related page query, got count=%d all=%d", stats.countCalls, stats.allCalls)
+	}
+	if len(stats.limits) != 1 || stats.limits[0] != 20 {
+		t.Fatalf("expected related query to apply limit 20, got %v", stats.limits)
+	}
+	if len(stats.offsets) != 1 || stats.offsets[0] != 20 {
+		t.Fatalf("expected related query to apply offset 20, got %v", stats.offsets)
 	}
 }
 
@@ -641,10 +657,11 @@ func reflectValueOfWhere(query *fakePredicateQuery) reflect.Value {
 type fakeRelatedSource struct {
 	ID    uuid.UUID
 	Items []fakeRelatedItem
+	Stats *fakeRelatedQueryStats
 }
 
 func (s fakeRelatedSource) QueryItems() *fakeRelatedItemQuery {
-	return &fakeRelatedItemQuery{records: s.Items}
+	return &fakeRelatedItemQuery{records: s.Items, stats: s.Stats}
 }
 
 type fakeRelatedItem struct {
@@ -655,14 +672,58 @@ type fakeRelatedItem struct {
 type fakeRelatedItemQuery struct {
 	records    []fakeRelatedItem
 	namePrefix string
+	limit      *int
+	offset     int
+	stats      *fakeRelatedQueryStats
+}
+
+type fakeRelatedQueryStats struct {
+	countCalls int
+	allCalls   int
+	limits     []int
+	offsets    []int
+}
+
+func (q *fakeRelatedItemQuery) Count(ctx context.Context) (int, error) {
+	if q.stats != nil {
+		q.stats.countCalls++
+	}
+	return len(q.records), nil
+}
+
+func (q *fakeRelatedItemQuery) Limit(limit int) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.limits = append(q.stats.limits, limit)
+	}
+	q.limit = &limit
+	return q
+}
+
+func (q *fakeRelatedItemQuery) Offset(offset int) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.offsets = append(q.stats.offsets, offset)
+	}
+	q.offset = offset
+	return q
 }
 
 func (q *fakeRelatedItemQuery) All(ctx context.Context) ([]fakeRelatedItem, error) {
-	if q.namePrefix == "" {
-		return q.records, nil
+	if q.stats != nil {
+		q.stats.allCalls++
 	}
-	records := make([]fakeRelatedItem, len(q.records))
-	copy(records, q.records)
+	start := q.offset
+	if start > len(q.records) {
+		start = len(q.records)
+	}
+	end := len(q.records)
+	if q.limit != nil && start+*q.limit < end {
+		end = start + *q.limit
+	}
+	records := make([]fakeRelatedItem, end-start)
+	copy(records, q.records[start:end])
+	if q.namePrefix == "" {
+		return records, nil
+	}
 	for i := range records {
 		records[i].Name = q.namePrefix + records[i].Name
 	}

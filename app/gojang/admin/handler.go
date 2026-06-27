@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -429,6 +430,9 @@ func (h *Handler) resourcePageData(r *http.Request, resourceName string) (*resou
 
 func (h *Handler) queryWorkspaceRecords(r *http.Request, config *ModelConfig, filter GridFilter, sortState GridSort, related RelatedFilter, limit, offset int) ([]interface{}, int, error) {
 	if related.Valid {
+		if !filter.Valid && !sortState.Valid {
+			return h.queryRelatedRecordsPaginated(r, related, limit, offset)
+		}
 		records, err := h.queryRelatedRecords(r, related)
 		if err != nil {
 			return nil, 0, err
@@ -507,38 +511,128 @@ func (h *Handler) parseRelatedFilter(r *http.Request, targetConfig *ModelConfig)
 }
 
 func (h *Handler) queryRelatedRecords(r *http.Request, related RelatedFilter) ([]interface{}, error) {
+	records, _, err := h.queryRelatedRecordsWithMode(r, related, 0, 0, false)
+	return records, err
+}
+
+func (h *Handler) queryRelatedRecordsPaginated(r *http.Request, related RelatedFilter, limit, offset int) ([]interface{}, int, error) {
+	return h.queryRelatedRecordsWithMode(r, related, limit, offset, true)
+}
+
+func (h *Handler) queryRelatedRecordsWithMode(r *http.Request, related RelatedFilter, limit, offset int, paginated bool) ([]interface{}, int, error) {
 	sourceConfig, err := h.Registry.Get(related.SourceResource)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	targetConfig, err := h.Registry.Get(related.SourceField.RelationTarget)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	sourceRecord, err := sourceConfig.QueryByID(r.Context(), related.SourceID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	recordValue := reflect.ValueOf(sourceRecord)
-	queryMethod := recordValue.MethodByName("Query" + related.SourceField.Name)
-	if !queryMethod.IsValid() {
-		return nil, fmt.Errorf("related query %s.%s is not available", related.SourceResource, related.SourceField.Name)
+	newQuery := func() (interface{}, error) {
+		recordValue := reflect.ValueOf(sourceRecord)
+		queryMethod := recordValue.MethodByName("Query" + related.SourceField.Name)
+		if !queryMethod.IsValid() {
+			return nil, fmt.Errorf("related query %s.%s is not available", related.SourceResource, related.SourceField.Name)
+		}
+		queryResults := queryMethod.Call(nil)
+		if len(queryResults) != 1 {
+			return nil, fmt.Errorf("related query %s.%s returned unexpected values", related.SourceResource, related.SourceField.Name)
+		}
+		query := queryResults[0].Interface()
+		if targetConfig.QueryModifier != nil {
+			query = targetConfig.QueryModifier(r.Context(), query)
+		}
+		if query == nil {
+			return nil, fmt.Errorf("related query %s.%s modifier returned nil", related.SourceResource, related.SourceField.Name)
+		}
+		return query, nil
 	}
-	queryResults := queryMethod.Call(nil)
-	if len(queryResults) != 1 {
-		return nil, fmt.Errorf("related query %s.%s returned unexpected values", related.SourceResource, related.SourceField.Name)
+
+	if paginated {
+		countQuery, err := newQuery()
+		if err != nil {
+			return nil, 0, err
+		}
+		totalCount, err := callQueryCount(r.Context(), countQuery, related)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		pageQuery, err := newQuery()
+		if err != nil {
+			return nil, 0, err
+		}
+		if limit > 0 {
+			pageQuery, err = callQueryIntMethod(pageQuery, "Limit", limit, related)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+		if offset > 0 {
+			pageQuery, err = callQueryIntMethod(pageQuery, "Offset", offset, related)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+		records, err := callQueryAll(r.Context(), pageQuery, related)
+		if err != nil {
+			return nil, 0, err
+		}
+		return records, totalCount, nil
 	}
-	query := queryResults[0].Interface()
-	if targetConfig.QueryModifier != nil {
-		query = targetConfig.QueryModifier(r.Context(), query)
+
+	query, err := newQuery()
+	if err != nil {
+		return nil, 0, err
 	}
+	records, err := callQueryAll(r.Context(), query, related)
+	if err != nil {
+		return nil, 0, err
+	}
+	return records, len(records), nil
+}
+
+func callQueryCount(ctx context.Context, query interface{}, related RelatedFilter) (int, error) {
+	queryVal := reflect.ValueOf(query)
+	countMethod := queryVal.MethodByName("Count")
+	if !countMethod.IsValid() {
+		return 0, fmt.Errorf("related query %s.%s cannot count records", related.SourceResource, related.SourceField.Name)
+	}
+	countResults := countMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
+	if len(countResults) != 2 {
+		return 0, fmt.Errorf("related query %s.%s returned unexpected count values", related.SourceResource, related.SourceField.Name)
+	}
+	if !countResults[1].IsNil() {
+		return 0, countResults[1].Interface().(error)
+	}
+	return int(countResults[0].Int()), nil
+}
+
+func callQueryIntMethod(query interface{}, methodName string, value int, related RelatedFilter) (interface{}, error) {
+	queryVal := reflect.ValueOf(query)
+	method := queryVal.MethodByName(methodName)
+	if !method.IsValid() {
+		return nil, fmt.Errorf("related query %s.%s cannot apply %s", related.SourceResource, related.SourceField.Name, methodName)
+	}
+	methodResults := method.Call([]reflect.Value{reflect.ValueOf(value)})
+	if len(methodResults) != 1 {
+		return nil, fmt.Errorf("related query %s.%s returned unexpected %s values", related.SourceResource, related.SourceField.Name, methodName)
+	}
+	return methodResults[0].Interface(), nil
+}
+
+func callQueryAll(ctx context.Context, query interface{}, related RelatedFilter) ([]interface{}, error) {
 	queryVal := reflect.ValueOf(query)
 	allMethod := queryVal.MethodByName("All")
 	if !allMethod.IsValid() {
 		return nil, fmt.Errorf("related query %s.%s cannot list records", related.SourceResource, related.SourceField.Name)
 	}
-	allResults := allMethod.Call([]reflect.Value{reflect.ValueOf(r.Context())})
+	allResults := allMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
 	if len(allResults) != 2 {
 		return nil, fmt.Errorf("related query %s.%s returned unexpected list values", related.SourceResource, related.SourceField.Name)
 	}
