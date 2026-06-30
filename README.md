@@ -1,5 +1,7 @@
 # Gojang Framework
 
+v0.3.2 - Google Analytics and reCAPTCHA integration, Admin site workspace showing related records correctly
+
 v0.3.1 - Email verification for new registration, forgot/reset password process, AWS SES email implemntation
 
 v0.3 - New file structure - separating dev files from Gojang framework files - AI Skills added - Docs updated - addModel and addPage automations removed - Ent schema files moved to more convenient location
