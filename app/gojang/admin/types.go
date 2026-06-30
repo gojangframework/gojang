@@ -16,6 +16,7 @@ type ModelConfig struct {
 	HiddenFields   []string      // Fields to hide
 	ReadonlyFields []string      // Fields that can't be edited
 	Internal       bool          // Hide from generic admin workspace routes
+	QueryModifier  AfterLoadHook // Optional hook to eager-load or adjust Ent queries
 
 	// CRUD operations
 	QueryAll          func(ctx context.Context) ([]interface{}, error)
@@ -36,6 +37,7 @@ type clearFieldValue struct{}
 // FieldConfig defines configuration for a single field
 type FieldConfig struct {
 	Name      string      // Field name (database column)
+	Column    string      // Database column name for scalar Ent fields
 	Label     string      // Display label
 	Type      FieldType   // Field type
 	Required  bool        // Is field required?
@@ -54,6 +56,11 @@ type FieldConfig struct {
 	Filterable bool
 	System     bool // Internal/protected field
 	Virtual    bool // Not backed by a direct Ent struct field
+
+	// Relation metadata for Ent edge fields.
+	Relation       bool
+	RelationTarget string
+	RelationMany   bool
 }
 
 // FieldType represents the type of field

@@ -104,6 +104,10 @@ func TestRegisterModelPreservesDiscoveredRelationFields(t *testing.T) {
 	if _, ok := findField(postConfig, "Author"); !ok {
 		t.Fatal("expected post override to preserve discovered Author relation")
 	}
+	authorField, ok := findField(postConfig, "Author")
+	if !ok || !authorField.Relation || authorField.RelationTarget != "User" || authorField.RelationMany {
+		t.Fatalf("expected Author relation metadata to target User: %+v", authorField)
+	}
 
 	fields := workspaceFields(postConfig)
 	found := false
@@ -114,6 +118,15 @@ func TestRegisterModelPreservesDiscoveredRelationFields(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected Author relation to render in workspace fields")
+	}
+
+	userConfig, err := registry.Get("User")
+	if err != nil {
+		t.Fatal(err)
+	}
+	postsField, ok := findField(userConfig, "Posts")
+	if !ok || !postsField.Relation || postsField.RelationTarget != "Post" || !postsField.RelationMany {
+		t.Fatalf("expected Posts relation metadata to target Post: %+v", postsField)
 	}
 }
 

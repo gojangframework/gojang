@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -391,6 +392,181 @@ func TestGridFieldSelectionFilterAndSortAffectRows(t *testing.T) {
 	}
 }
 
+func TestGridCanOpenRelatedRecords(t *testing.T) {
+	sourceID := uuid.New()
+	stats := &fakeRelatedQueryStats{}
+	items := make([]fakeRelatedItem, 21)
+	for i := range items {
+		items[i] = fakeRelatedItem{ID: uuid.New(), Name: fmt.Sprintf("item-%02d", i+1)}
+	}
+	registry := &Registry{models: map[string]*ModelConfig{}}
+	registry.register(&ModelConfig{
+		Name:       "Source",
+		NamePlural: "Sources",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Items", Label: "Items", Type: FieldTypeSelect, Readonly: true, Visible: true, Relation: true, RelationTarget: "Item", RelationMany: true},
+		},
+		QueryByID: func(ctx context.Context, got uuid.UUID) (interface{}, error) {
+			if got != sourceID {
+				t.Fatalf("expected source ID %s, got %s", sourceID, got)
+			}
+			return fakeRelatedSource{
+				ID:    sourceID,
+				Name:  "Primary source",
+				Items: items,
+				Stats: stats,
+			}, nil
+		},
+	})
+	registry.register(&ModelConfig{
+		Name:       "Item",
+		NamePlural: "Items",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Name", Label: "Name", Type: FieldTypeString, Editable: true, Visible: true, Width: 220, Sortable: true, Filterable: true},
+		},
+		ListFields: []string{"ID", "Name"},
+		QueryModifier: func(ctx context.Context, query interface{}) interface{} {
+			if q, ok := query.(*fakeRelatedItemQuery); ok {
+				q.namePrefix = "modified-"
+			}
+			return query
+		},
+	})
+
+	renderer, err := NewAdminRenderer(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(registry, renderer, nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&page=2&per_page=20&related_from=Source&related_field=Items&related_id="+sourceID.String(), nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("resource", "item")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	handler.Grid(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Items for Primary source",
+		"modified-item-21",
+		"Page 2 of 2",
+		`name="related_from" value="Source"`,
+		`name="related_field" value="Items"`,
+		`name="related_id" value="` + sourceID.String() + `"`,
+		`href="/admin/t/item?`,
+		`related_id=` + sourceID.String(),
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected related grid to contain %q, got %s", want, body)
+		}
+	}
+	if strings.Contains(body, "modified-item-01") {
+		t.Fatalf("expected related grid to render only the requested page, got %s", body)
+	}
+	for _, unwanted := range []string{`>+ Add record</button>`, `new-record-row`, `Add a new item`} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("expected related grid to hide create affordance %q, got %s", unwanted, body)
+		}
+	}
+	if stats.countCalls != 1 || stats.allCalls != 1 {
+		t.Fatalf("expected one related count and one related page query, got count=%d all=%d", stats.countCalls, stats.allCalls)
+	}
+	if len(stats.limits) != 1 || stats.limits[0] != 20 {
+		t.Fatalf("expected related query to apply limit 20, got %v", stats.limits)
+	}
+	if len(stats.offsets) != 1 || stats.offsets[0] != 20 {
+		t.Fatalf("expected related query to apply offset 20, got %v", stats.offsets)
+	}
+}
+
+func TestRelatedGridPushesFilterAndSortIntoQuery(t *testing.T) {
+	sourceID := uuid.New()
+	stats := &fakeRelatedQueryStats{}
+	items := []fakeRelatedItem{
+		{ID: uuid.New(), Name: "alpha"},
+		{ID: uuid.New(), Name: "beta"},
+	}
+	registry := &Registry{models: map[string]*ModelConfig{}}
+	registry.register(&ModelConfig{
+		Name:       "Source",
+		NamePlural: "Sources",
+		Fields: []FieldConfig{
+			{Name: "ID", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Items", Label: "Items", Type: FieldTypeSelect, Readonly: true, Visible: true, Relation: true, RelationTarget: "Item", RelationMany: true},
+		},
+		QueryByID: func(ctx context.Context, got uuid.UUID) (interface{}, error) {
+			if got != sourceID {
+				t.Fatalf("expected source ID %s, got %s", sourceID, got)
+			}
+			return fakeRelatedSource{
+				ID:    sourceID,
+				Name:  "Primary source",
+				Items: items,
+				Stats: stats,
+			}, nil
+		},
+	})
+	registry.register(&ModelConfig{
+		Name:       "Item",
+		NamePlural: "Items",
+		Fields: []FieldConfig{
+			{Name: "ID", Column: "id", Label: "ID", Type: FieldTypeString, Readonly: true, Visible: true, Width: 200},
+			{Name: "Name", Column: "name", Label: "Name", Type: FieldTypeString, Editable: true, Visible: true, Width: 220, Sortable: true, Filterable: true},
+		},
+		ListFields: []string{"ID", "Name"},
+	})
+
+	renderer, err := NewAdminRenderer(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(registry, renderer, nil)
+	req := httptest.NewRequest(http.MethodGet, "/admin/t/item/grid?view=grid&fields=Name&page=1&per_page=20&related_from=Source&related_field=Items&related_id="+sourceID.String()+"&filter_field=Name&filter_op=contains&filter_value=a&sort_field=Name&sort_dir=desc", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("resource", "item")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	handler.Grid(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if stats.whereCalls != 2 {
+		t.Fatalf("expected related count and page queries to apply filters, got %d", stats.whereCalls)
+	}
+	if stats.orderCalls != 1 {
+		t.Fatalf("expected related page query to apply sort, got %d", stats.orderCalls)
+	}
+	if stats.allCalls != 1 || stats.countCalls != 1 {
+		t.Fatalf("expected optimized related query path, got all=%d count=%d", stats.allCalls, stats.countCalls)
+	}
+}
+
+func TestRelationSummaryDistinguishesUnloadedAndEmptySlices(t *testing.T) {
+	field := FieldConfig{Name: "Items", Relation: true, RelationTarget: "Item"}
+
+	unloaded := struct {
+		Items []fakeRelatedItem
+	}{}
+	if got := relationSummary(unloaded, field); got != "Open related Items" {
+		t.Fatalf("expected unloaded nil relation slice to invite drilldown, got %q", got)
+	}
+
+	loadedEmpty := struct {
+		Items []fakeRelatedItem
+	}{Items: []fakeRelatedItem{}}
+	if got := relationSummary(loadedEmpty, field); got != "No related Items" {
+		t.Fatalf("expected loaded empty relation slice to show empty summary, got %q", got)
+	}
+}
+
 func TestRenderCellErrorReturnsSwappablePartial(t *testing.T) {
 	id := uuid.New()
 	config := &ModelConfig{
@@ -541,6 +717,103 @@ func (q *fakePredicateQuery) Where(predicates ...fakePredicate) *fakePredicateQu
 
 func reflectValueOfWhere(query *fakePredicateQuery) reflect.Value {
 	return reflect.ValueOf(query).MethodByName("Where")
+}
+
+type fakeRelatedSource struct {
+	ID    uuid.UUID
+	Name  string
+	Items []fakeRelatedItem
+	Stats *fakeRelatedQueryStats
+}
+
+func (s fakeRelatedSource) QueryItems() *fakeRelatedItemQuery {
+	return &fakeRelatedItemQuery{records: s.Items, stats: s.Stats}
+}
+
+type fakeRelatedItem struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type fakeRelatedItemQuery struct {
+	records    []fakeRelatedItem
+	namePrefix string
+	limit      *int
+	offset     int
+	stats      *fakeRelatedQueryStats
+}
+
+type fakeRelatedQueryStats struct {
+	countCalls int
+	allCalls   int
+	whereCalls int
+	orderCalls int
+	limits     []int
+	offsets    []int
+}
+
+type fakeRelatedPredicate func(*sql.Selector)
+
+type fakeRelatedOrder func(*sql.Selector)
+
+func (q *fakeRelatedItemQuery) Count(ctx context.Context) (int, error) {
+	if q.stats != nil {
+		q.stats.countCalls++
+	}
+	return len(q.records), nil
+}
+
+func (q *fakeRelatedItemQuery) Where(predicates ...fakeRelatedPredicate) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.whereCalls += len(predicates)
+	}
+	return q
+}
+
+func (q *fakeRelatedItemQuery) Order(orders ...fakeRelatedOrder) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.orderCalls += len(orders)
+	}
+	return q
+}
+
+func (q *fakeRelatedItemQuery) Limit(limit int) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.limits = append(q.stats.limits, limit)
+	}
+	q.limit = &limit
+	return q
+}
+
+func (q *fakeRelatedItemQuery) Offset(offset int) *fakeRelatedItemQuery {
+	if q.stats != nil {
+		q.stats.offsets = append(q.stats.offsets, offset)
+	}
+	q.offset = offset
+	return q
+}
+
+func (q *fakeRelatedItemQuery) All(ctx context.Context) ([]fakeRelatedItem, error) {
+	if q.stats != nil {
+		q.stats.allCalls++
+	}
+	start := q.offset
+	if start > len(q.records) {
+		start = len(q.records)
+	}
+	end := len(q.records)
+	if q.limit != nil && start+*q.limit < end {
+		end = start + *q.limit
+	}
+	records := make([]fakeRelatedItem, end-start)
+	copy(records, q.records[start:end])
+	if q.namePrefix == "" {
+		return records, nil
+	}
+	for i := range records {
+		records[i].Name = q.namePrefix + records[i].Name
+	}
+	return records, nil
 }
 
 type fakeTimeUpdateBuilder struct {

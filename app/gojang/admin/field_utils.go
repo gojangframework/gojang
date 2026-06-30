@@ -62,6 +62,7 @@ func extractFieldsFromType(t reflect.Type, override AdminOverrides) []FieldConfi
 
 		fields = append(fields, FieldConfig{
 			Name:       fieldName,
+			Column:     columnNameFromStructField(field),
 			Label:      label,
 			Type:       fieldType,
 			Required:   required,
@@ -81,6 +82,35 @@ func extractFieldsFromType(t reflect.Type, override AdminOverrides) []FieldConfi
 	markPrimaryField(fields)
 
 	return fields
+}
+
+func columnNameFromStructField(field reflect.StructField) string {
+	tag := field.Tag.Get("json")
+	if tag == "" {
+		return camelToSnake(field.Name)
+	}
+	name := strings.Split(tag, ",")[0]
+	if name == "" || name == "-" {
+		return camelToSnake(field.Name)
+	}
+	return name
+}
+
+func camelToSnake(value string) string {
+	var result strings.Builder
+	runes := []rune(value)
+	for i, r := range runes {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			prev := runes[i-1]
+			nextIsLower := i+1 < len(runes) && runes[i+1] >= 'a' && runes[i+1] <= 'z'
+			prevIsLowerOrDigit := (prev >= 'a' && prev <= 'z') || (prev >= '0' && prev <= '9')
+			if prevIsLowerOrDigit || nextIsLower {
+				result.WriteRune('_')
+			}
+		}
+		result.WriteRune(r)
+	}
+	return strings.ToLower(result.String())
 }
 
 // detectFieldType determines the field type from reflection

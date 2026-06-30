@@ -9,6 +9,19 @@
         <a class="sheet-view active"
            href="/admin/t/{{$config.Name | lower}}?{{gridQuery $grid $grid.Page}}"
            aria-current="page">Grid view</a>
+        {{if $grid.Related.Valid}}
+        <span class="related-filter-chip">
+            {{if $grid.Related.SourceLabel}}
+            {{$config.NamePlural}} for {{$grid.Related.SourceLabel}}
+            {{else}}
+            Related {{$config.NamePlural | lower}} from {{$grid.Related.SourceResource}} {{$grid.Related.SourceField.Label}}
+            {{end}}
+            <a href="/admin/t/{{$config.Name | lower}}?{{gridQueryWithoutRelated $grid 1}}"
+               hx-get="/admin/t/{{$config.Name | lower}}/grid?{{gridQueryWithoutRelated $grid 1}}"
+               hx-target="#workspace-grid"
+               hx-swap="innerHTML">Clear</a>
+        </span>
+        {{end}}
     </div>
     <div class="sheet-meta-actions">
         <div class="grid-action-row">
@@ -23,6 +36,11 @@
                     <input type="hidden" name="view" value="grid">
                     <input type="hidden" name="page" value="1">
                     <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{if $grid.Related.Valid}}
+                    <input type="hidden" name="related_from" value="{{$grid.Related.SourceResource}}">
+                    <input type="hidden" name="related_field" value="{{$grid.Related.SourceField.Name}}">
+                    <input type="hidden" name="related_id" value="{{$grid.Related.SourceID}}">
+                    {{end}}
                     {{if $grid.Filter.Valid}}
                     <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
                     <input type="hidden" name="filter_op" value="{{$grid.Filter.Op}}">
@@ -58,6 +76,11 @@
                     <input type="hidden" name="view" value="grid">
                     <input type="hidden" name="page" value="1">
                     <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{if $grid.Related.Valid}}
+                    <input type="hidden" name="related_from" value="{{$grid.Related.SourceResource}}">
+                    <input type="hidden" name="related_field" value="{{$grid.Related.SourceField.Name}}">
+                    <input type="hidden" name="related_id" value="{{$grid.Related.SourceID}}">
+                    {{end}}
                     {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
                     {{if $grid.Sort.Valid}}
                     <input type="hidden" name="sort_field" value="{{$grid.Sort.Field.Name}}">
@@ -100,6 +123,11 @@
                     <input type="hidden" name="view" value="grid">
                     <input type="hidden" name="page" value="1">
                     <input type="hidden" name="per_page" value="{{$grid.PerPage}}">
+                    {{if $grid.Related.Valid}}
+                    <input type="hidden" name="related_from" value="{{$grid.Related.SourceResource}}">
+                    <input type="hidden" name="related_field" value="{{$grid.Related.SourceField.Name}}">
+                    <input type="hidden" name="related_id" value="{{$grid.Related.SourceID}}">
+                    {{end}}
                     {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
                     {{if $grid.Filter.Valid}}
                     <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
@@ -125,10 +153,12 @@
                 </form>
             </details>
 
+            {{if not $grid.Related.Valid}}
             <button class="primary-toolbar-button"
                 hx-get="/admin/t/{{$config.Name | lower}}/records/new?{{gridQuery $grid $grid.Page}}"
                 hx-target="#record-drawer"
                 hx-swap="innerHTML">+ Add record</button>
+            {{end}}
         </div>
 
         <form class="sheet-page-size"
@@ -139,6 +169,11 @@
               hx-swap="innerHTML">
             <input type="hidden" name="view" value="grid">
             <input type="hidden" name="page" value="1">
+            {{if $grid.Related.Valid}}
+            <input type="hidden" name="related_from" value="{{$grid.Related.SourceResource}}">
+            <input type="hidden" name="related_field" value="{{$grid.Related.SourceField.Name}}">
+            <input type="hidden" name="related_id" value="{{$grid.Related.SourceID}}">
+            {{end}}
             {{range $fields}}<input type="hidden" name="fields" value="{{.Name}}">{{end}}
             {{if $grid.Filter.Valid}}
             <input type="hidden" name="filter_field" value="{{$grid.Filter.Field.Name}}">
@@ -195,6 +230,7 @@
                     </td>
                 </tr>
             {{end}}
+            {{if not $grid.Related.Valid}}
             <tr class="new-record-row">
                 <td class="row-number-col">+</td>
                 <td colspan="{{add (len $fields) 1}}">
@@ -204,6 +240,7 @@
                         hx-swap="innerHTML">Add a new {{$config.Name | lower}}</button>
                 </td>
             </tr>
+            {{end}}
         </tbody>
     </table>
 </div>

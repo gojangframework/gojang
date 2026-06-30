@@ -14,7 +14,11 @@
     <div class="cell-error">{{index $errors $field.Name}}</div>
     {{end}}{{end}}
 
-    {{if canEditRecordField $config $record $field}}
+    {{if relationURL $config $record $field}}
+        <a class="cell-readonly relation-cell-link" href="{{relationURL $config $record $field}}">
+            {{relationSummary $record $field}}
+        </a>
+    {{else if canEditRecordField $config $record $field}}
         {{if eq $field.Type "bool"}}
         <form class="cell-bool-form"
               hx-patch="/admin/t/{{$config.Name | lower}}/records/{{$id}}/fields/{{$field.Name}}"

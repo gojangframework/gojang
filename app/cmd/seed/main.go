@@ -99,6 +99,7 @@ func main() {
 		SetIsActive(true).
 		SetIsStaff(true).
 		SetIsSuperuser(true).
+		SetIsEmailVerified(true).
 		Save(ctx)
 
 	if err != nil {
