@@ -1,3 +1,7 @@
+v0.3.2 - 6/29/2026
+- Google Analytics and reCAPTCHA integration
+- Bug fix: admin site workspace showing related records correctly
+
 v0.3.1 - 6/26/2026
 - Email verification for new registration
 - Forgot / reset password process implemented with email verifcation
