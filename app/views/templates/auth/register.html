@@ -58,6 +58,9 @@
                 </div>
             {{end}}
             <div id="register-recaptcha-error" class="alert alert-error" hidden></div>
+            {{if .Data}}{{with index .Data "RecaptchaSiteKey"}}
+                <div class="auth-system-message">reCAPTCHA v3 enabled</div>
+            {{end}}{{end}}
 
             <button type="submit" class="btn btn-primary">{{t . "create_account"}}</button>
         </form>
