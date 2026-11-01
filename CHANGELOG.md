@@ -1,3 +1,6 @@
+v0.3.3 - 11/1/2026
+- Bump golang.org/x/crypto from 0.42.0 to 0.52.0
+
 v0.3.2 - 6/29/2026
 - Google Analytics and reCAPTCHA integration
 - Bug fix: admin site workspace showing related records correctly
